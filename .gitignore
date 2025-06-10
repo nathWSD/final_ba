@@ -1,0 +1,58 @@
+# Ignore Python cache directories
+__pycache__/
+
+# Ignore the .env file which contains sensitive environment variables
+.env
+
+# === Optional but Recommended Ignores for Python Projects ===
+
+# Byte-compiled files
+*.pyc
+*.pyd
+*.pyo
+
+# Editors/IDE files (adjust based on your IDE)
+.vscode/ # VS Code
+.idea/   # PyCharm/IntelliJ IDEA
+*.iml    # PyCharm/IntelliJ IDEA project files
+.DS_Store # macOS system files
+
+# Virtual environment directories
+venv/
+.venv/
+env/
+
+# Build/Distribution files
+dist/
+build/
+*.egg-info/
+
+# Test/coverage output
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Log files
+*.log
+
+# Example: Ignore your pipeline evaluation data directory (based on previous conversation)
+# This directory contains generated output you likely don't want in git
+src/evaluation/evaluation_data_copy/
+src/evaluation/pipeline_evaluation_data/
+src/evaluation/question_answer_generator/qa_data-Kopie.json
+src/ingestion_pipeline/graph_llm_ingestion/rag_files
+src/ingestion_pipeline/graph_llm_ingestion/llm_graph_images
+src/ingestion_pipeline/graph_classical_model_ingestion/classical_graph_images
+src/ingestion_pipeline/graph_classical_model_ingestion/rag_files
+poetry.lock
+pyproject.toml
+vector_retriever_test.py
+graph_retriever_test.py
+.deepeval_telemetry.txt
+test_files_graph
+# Add any other specific files or directories you want to ignore
+# For example, if you have a large data directory you don't want tracked:
+# data/

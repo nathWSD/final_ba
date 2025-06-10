@@ -1,0 +1,1887 @@
+{
+  "annotations": {
+    "list": [
+      { "builtIn": 1, "datasource": { "type": "grafana", "uid": "-- Grafana --" }, "enable": true, "hide": true, "iconColor": "rgba(0, 211, 255, 1)", "name": "Annotations & Alerts", "type": "dashboard" },
+      {
+          "builtIn": 0,
+          "datasource": {
+              "type": "mysql",
+              "uid": "mysql-ba-main"
+          },
+          "enable": true,
+          "hide": false,
+          "iconColor": "rgba(255, 96, 96, 1)",
+          "name": "Row Count Levels",
+          "showIn": 0,
+          "tags": ["level"],
+          "target": {
+              "datasource": {
+                  "type": "mysql",
+                  "uid": "mysql-ba-main"
+              },
+              "format": "table",
+              "limit": 100,
+              "rawSql": "WITH RankedData AS (\n    SELECT\n        created_at,\n        ROW_NUMBER() OVER (ORDER BY created_at ASC) as rn,\n        COUNT(*) OVER () as total_rows\n    FROM ${selected_table:raw}\n),\nBoundaries AS (\n    SELECT\n        MIN(CASE WHEN rn = 1 THEN created_at END) as time_start,\n        MIN(CASE WHEN rn = FLOOR(total_rows / 3) THEN created_at END) as time_level2_start,\n        MIN(CASE WHEN rn = FLOOR(2 * total_rows / 3) THEN created_at END) as time_level3_start,\n        MAX(created_at) as time_end\n    FROM RankedData\n)\nSELECT\n    time_start AS time,\n    time_level2_start AS timeEnd,\n    'Level 1' AS text,\n    'level,level1' AS tags\nFROM Boundaries\nWHERE time_level2_start IS NOT NULL\n\nUNION ALL\n\nSELECT\n    time_level2_start AS time,\n    time_level3_start AS timeEnd,\n    'Level 2' AS text,\n    'level,level2' AS tags\nFROM Boundaries\nWHERE time_level2_start IS NOT NULL AND time_level3_start IS NOT NULL\n\nUNION ALL\n\nSELECT\n    time_level3_start AS time,\n    time_end + INTERVAL 1 MICROSECOND AS timeEnd, \n    'Level 3' AS text,\n    'level,level3' AS tags\nFROM Boundaries\nWHERE time_level3_start IS NOT NULL;\n",
+              "refId": "RowCountLevelsAnnotation",
+              "table": "${selected_table:raw}",
+              "timeColumn": "time",
+              "timeEndColumn": "timeEnd",
+              "textColumn": "text",
+              "tagsColumn": "tags"
+          },
+          "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "panels": [
+    {
+      "id": 101,
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+        "type": "stat",
+        "title": "Avg Precision (${selected_table})",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "options": { "reduceOptions": { "values": false, "calcs": ["mean"], "fields": "" }, "orientation": "auto", "textMode": "auto" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },   
+                { "color": "super-light-yellow", "value": 0.66 }, 
+                { "color": "green", "value": 0.90 }    
+              ]
+            },
+            "unit": "percentunit",
+            "decimals": 2
+          }
+        },
+        "targets": [ { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "table", "rawSql": "SELECT AVG(`precision`) AS avg_precision FROM ${selected_table:raw}", "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" } } ]
+      },
+      {
+         "id": 102,
+         "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+         "type": "stat",
+         "title": "Avg Recall (${selected_table})",
+         "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+         "options": { "reduceOptions": { "values": false, "calcs": ["mean"], "fields": "" }, "orientation": "auto", "textMode": "auto" },
+         "fieldConfig": {
+           "defaults": {
+             "color": { "mode": "thresholds" },
+             "mappings": [],
+             "thresholds": {
+               "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "super-light-yellow", "value": 0.66 },
+                  { "color": "green", "value": 0.90 }
+                ]
+             },
+             "unit": "percentunit",
+             "decimals": 2
+           }
+         },
+         "targets": [ { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "table", "rawSql": "SELECT AVG(`recall`) AS avg_recall FROM ${selected_table:raw}", "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" } } ]
+      },
+       {
+         "id": 103,
+         "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+         "type": "stat",
+         "title": "Avg Time Taken (${selected_table})",
+         "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+         "options": { "reduceOptions": { "values": false, "calcs": ["mean"], "fields": "" }, "orientation": "auto", "textMode": "auto" },
+         "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "super-light-yellow", "value": 1 }, { "color": "red", "value": 3 } ] }, "unit": "s", "decimals": 3 } },
+         "targets": [ { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "table", "rawSql": "SELECT AVG(time_taken) AS avg_time FROM ${selected_table:raw}", "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" } } ]
+      },
+       {
+         "id": 104,
+         "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+         "type": "stat",
+         "title": "Avg Relevancy (${selected_table})",
+         "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+         "options": { "reduceOptions": { "values": false, "calcs": ["mean"], "fields": "" }, "orientation": "auto", "textMode": "auto" },
+         "fieldConfig": {
+           "defaults": {
+             "color": { "mode": "thresholds" },
+             "mappings": [],
+             "thresholds": {
+               "mode": "absolute",
+               "steps": [
+                 { "color": "red", "value": null },
+                 { "color": "super-light-yellow", "value": 0.66 },
+                 { "color": "green", "value": 0.90 }
+               ]
+             },
+             "unit": "percentunit",
+             "decimals": 2
+           }
+         },
+         "targets": [ { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "table", "rawSql": "SELECT AVG(relevancy) AS avg_relevancy FROM ${selected_table:raw}", "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" } } ]
+      }
+      ,
+      {
+        "id": 105,
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 4 },
+        "type": "stat",
+        "title": "Avg ROUGE-1 (${selected_table})",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "options": { "reduceOptions": { "values": false, "calcs": ["mean"], "fields": "" }, "orientation": "auto", "textMode": "auto" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                  { "color": "super-light-yellow", "value": 0.66 },
+                { "color": "green", "value": 0.90 }
+              ]
+            },
+            "unit": "percentunit",
+            "decimals": 2
+          }
+        },
+        "targets": [ { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "table", "rawSql": "SELECT AVG(rouge1) AS avg_rouge1 FROM ${selected_table:raw}", "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" } } ]
+      },
+      {
+        "id": 106,
+        "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+        "type": "stat",
+        "title": "Avg Cosine Sim (${selected_table})",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "options": { "reduceOptions": { "values": false, "calcs": ["mean"], "fields": "" }, "orientation": "auto", "textMode": "auto" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "super-light-yellow", "value": 0.66 },
+                { "color": "green", "value": 0.90 }
+              ]
+            },
+            "unit": "percentunit",
+            "decimals": 2
+          }
+        },
+        "targets": [ { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "table", "rawSql": "SELECT AVG(cosine_similarity) AS avg_cosine_similarity FROM ${selected_table:raw}", "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" } } ]
+      },
+      {
+        "id": 107,
+        "gridPos": { "h": 4, "w": 6, "x": 12, "y": 4 },
+        "type": "stat",
+        "title": "Avg Input Tokens (${selected_table})",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "options": { "reduceOptions": { "values": false, "calcs": ["mean"], "fields": "" }, "orientation": "auto", "textMode": "auto" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "super-light-yellow", "value": 1500 },
+                { "color": "red", "value": 2500 }
+              ]
+            },
+            "unit": "none",
+            "decimals": 0
+          }
+        },
+        "targets": [ { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "table", "rawSql": "SELECT AVG(num_input_token) AS avg_input_tokens FROM ${selected_table:raw}", "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" } } ]
+      },
+      {
+        "id": 108,
+        "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+        "type": "stat",
+        "title": "Avg Output Tokens (${selected_table})",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "options": { "reduceOptions": { "values": false, "calcs": ["mean"], "fields": "" }, "orientation": "auto", "textMode": "auto" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "super-light-yellow", "value": 200 },
+                { "color": "red", "value": 800 }
+              ]
+            },
+            "unit": "none",
+            "decimals": 0
+          }
+        },
+        "targets": [ { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "table", "rawSql": "SELECT AVG(num_output_token) AS avg_output_tokens FROM ${selected_table:raw}", "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" } } ]
+      },
+      {
+        "id": 1,
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+        "type": "timeseries",
+        "title": "Precision Flow (${selected_table})",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "fieldConfig": {
+             "defaults": { "color": { "mode": "palette-classic" }, "unit": "percentunit", "decimals": 2, "custom": { "axisLabel": "Precision", "axisPlacement": "left", "fillOpacity": 10, "gradientMode": "none", "lineWidth": 2, "lineInterpolation": "linear", "showPoints": "auto", "spanNulls": false } },
+             "overrides": []
+         },
+        "targets": [ { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "time_series", "rawSql": "SELECT created_at AS \"time\", `precision` FROM ${selected_table:raw}\nORDER BY created_at ASC", "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" } } ]
+      },
+      {
+        "id": 2,
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+         "type": "timeseries",
+         "title": "Recall Flow (${selected_table})",
+         "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+         "fieldConfig": {
+             "defaults": { "color": { "mode": "palette-classic" }, "unit": "percentunit", "decimals": 2, "custom": { "axisLabel": "Recall", "axisPlacement": "left", "fillOpacity": 10, "gradientMode": "none", "lineWidth": 2, "lineInterpolation": "linear", "showPoints": "auto", "spanNulls": false } },
+             "overrides": []
+         },
+         "targets": [ { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "time_series", "rawSql": "SELECT created_at AS \"time\", `recall` FROM ${selected_table:raw}\nORDER BY created_at ASC", "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" } } ]
+      },
+      {
+        "id": 3,
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+         "type": "timeseries",
+         "title": "Time Taken Flow (${selected_table})",
+         "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+         "fieldConfig": {
+             "defaults": { "color": { "mode": "palette-classic" }, "unit": "s", "decimals": 3, "custom": { "axisLabel": "Seconds", "axisPlacement": "left", "fillOpacity": 10, "gradientMode": "none", "lineWidth": 2, "lineInterpolation": "linear", "showPoints": "auto", "spanNulls": false } },
+             "overrides": []
+         },
+         "targets": [ { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "time_series", "rawSql": "SELECT created_at AS \"time\", time_taken FROM ${selected_table:raw}\nORDER BY created_at ASC", "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" } } ]
+      },
+       {
+        "id": 4,
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+         "type": "timeseries",
+         "title": "Relevancy Flow (${selected_table})",
+         "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+         "fieldConfig": {
+             "defaults": { "color": { "mode": "palette-classic" }, "unit": "percentunit", "decimals": 2, "custom": { "axisLabel": "Relevancy", "axisPlacement": "left", "fillOpacity": 10, "gradientMode": "none", "lineWidth": 2, "lineInterpolation": "linear", "showPoints": "auto", "spanNulls": false } },
+             "overrides": []
+         },
+         "targets": [ { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "time_series", "rawSql": "SELECT created_at AS \"time\", relevancy FROM ${selected_table:raw}\nORDER BY created_at ASC", "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" } } ]
+      },
+      {
+        "id": 5,
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
+         "type": "timeseries",
+         "title": "Rouge1 Flow (${selected_table})",
+         "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+         "fieldConfig": {
+             "defaults": { "color": { "mode": "palette-classic" }, "unit": "short", "decimals": 3, "custom": { "axisLabel": "Rouge1 Score", "axisPlacement": "left", "fillOpacity": 10, "gradientMode": "none", "lineWidth": 2, "lineInterpolation": "linear", "showPoints": "auto", "spanNulls": false } },
+             "overrides": []
+         },
+         "targets": [ { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "time_series", "rawSql": "SELECT created_at AS \"time\", rouge1 AS \"Rouge1\" FROM ${selected_table:raw}\nORDER BY created_at ASC", "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" } } ]
+       },
+       {
+        "id": 6,
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+         "type": "timeseries",
+         "title": "Cosine Similarity Flow (${selected_table})",
+         "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+         "fieldConfig": {
+             "defaults": { "color": { "mode": "palette-classic" }, "unit": "short", "decimals": 3, "custom": { "axisLabel": "Cosine Similarity", "axisPlacement": "left", "fillOpacity": 10, "gradientMode": "none", "lineWidth": 2, "lineInterpolation": "linear", "showPoints": "auto", "spanNulls": false } },
+             "overrides": []
+         },
+         "targets": [ { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "time_series", "rawSql": "SELECT created_at AS \"time\", cosine_similarity AS \"Cosine Similarity\" FROM ${selected_table:raw}\nORDER BY created_at ASC", "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" } } ]
+       },
+       {
+        "id": 7,
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 38 },
+         "type": "timeseries",
+         "title": "Input Token Flow (${selected_table})",
+         "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+         "fieldConfig": {
+             "defaults": { "color": { "mode": "palette-classic" }, "unit": "none", "decimals": 0, "custom": { "axisLabel": "Input Tokens", "axisPlacement": "left", "fillOpacity": 10, "gradientMode": "none", "lineWidth": 2, "lineInterpolation": "linear", "showPoints": "auto", "spanNulls": false } },
+             "overrides": []
+         },
+         "targets": [ { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "time_series", "rawSql": "SELECT created_at AS \"time\", num_input_token AS \"Input Tokens\" FROM ${selected_table:raw}\nORDER BY created_at ASC", "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" } } ]
+      },
+       {
+        "id": 8,
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 38 },
+         "type": "timeseries",
+         "title": "Output Token Flow (${selected_table})",
+         "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+         "fieldConfig": {
+             "defaults": { "color": { "mode": "palette-classic" }, "unit": "none", "decimals": 0, "custom": { "axisLabel": "Output Tokens", "axisPlacement": "left", "fillOpacity": 10, "gradientMode": "none", "lineWidth": 2, "lineInterpolation": "linear", "showPoints": "auto", "spanNulls": false } },
+             "overrides": []
+         },
+         "targets": [ { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "time_series", "rawSql": "SELECT created_at AS \"time\", num_output_token AS \"Output Tokens\" FROM ${selected_table:raw}\nORDER BY created_at ASC", "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" } } ]
+       }
+       ,
+
+
+
+
+       {
+    "id": 9,
+    "gridPos": { "h": 7, "w": 8, "x": 0, "y": 48 },
+    "type": "barchart",
+    "title": "Avg Precision - Level 1 (Rows 1-18)",
+    "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+    "fieldConfig": {
+      "defaults": {
+        "color": { "mode": "palette-classic" },
+        "custom": {
+          "axisPlacement": "auto",
+          "axisLabel": "Average Precision",
+          "axisColorMode": "text",
+          "axisCenteredZero": false,
+          "barAlignment": 0,
+          "fillOpacity": 80,
+          "gradientMode": "none",
+          "lineWidth": 1,
+          "showPoints": "never",
+          "spanNulls": false,
+          "stacking": { "group": "A", "mode": "none" },
+          "scaleDistribution": { "type": "linear" },
+          "thresholdsStyle": { "mode": "off" }
+        },
+        "mappings": [],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+        "unit": "percentunit",
+        "decimals": 2
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "tooltip": { "mode": "single", "show": true },
+      "barWidth": 0.6,
+      "groupWidth": 0.7
+    },
+    "pluginVersion": "11.1.0",
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "format": "table",
+        "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n)\nSELECT\n    table_name AS `Table Name`,\n    CAST(AVG(CASE WHEN rn BETWEEN 1 AND 18 THEN `precision` ELSE NULL END) AS DECIMAL(10,4)) AS `Avg Precision L1`\nFROM RankedData\nGROUP BY table_name\nHAVING AVG(CASE WHEN rn BETWEEN 1 AND 18 THEN `precision` ELSE NULL END) IS NOT NULL\nORDER BY `Avg Precision L1` DESC;",
+        "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "gridPos": { "h": 7, "w": 8, "x": 8, "y": 48 },
+    "type": "barchart",
+    "title": "Avg Precision - Level 2 (Rows 19-36)",
+    "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+    "fieldConfig": {
+      "defaults": {
+        "color": { "mode": "palette-classic" },
+        "custom": {
+          "axisPlacement": "auto",
+          "axisLabel": "Average Precision",
+          "axisColorMode": "text",
+          "axisCenteredZero": false,
+          "barAlignment": 0,
+          "fillOpacity": 80,
+          "gradientMode": "none",
+          "lineWidth": 1,
+          "showPoints": "never",
+          "spanNulls": false,
+          "stacking": { "group": "A", "mode": "none" },
+          "scaleDistribution": { "type": "linear" },
+          "thresholdsStyle": { "mode": "off" }
+        },
+        "mappings": [],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+        "unit": "percentunit",
+        "decimals": 2
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "tooltip": { "mode": "single", "show": true },
+      "barWidth": 0.6,
+      "groupWidth": 0.7
+    },
+    "pluginVersion": "11.1.0",
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "format": "table",
+        "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n)\nSELECT\n    table_name AS `Table Name`,\n    CAST(AVG(CASE WHEN rn BETWEEN 19 AND 36 THEN `precision` ELSE NULL END) AS DECIMAL(10,4)) AS `Avg Precision L2`\nFROM RankedData\nGROUP BY table_name\nHAVING AVG(CASE WHEN rn BETWEEN 19 AND 36 THEN `precision` ELSE NULL END) IS NOT NULL\nORDER BY `Avg Precision L2` DESC;",
+        "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+      }
+    ]
+  },
+  {
+    "id": 11,
+    "gridPos": { "h": 7, "w": 8, "x": 16, "y": 48 },
+    "type": "barchart",
+    "title": "Avg Precision - Level 3 (Rows 37-54)",
+    "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+    "fieldConfig": {
+      "defaults": {
+        "color": { "mode": "palette-classic" },
+        "custom": {
+          "axisPlacement": "auto",
+          "axisLabel": "Average Precision",
+          "axisColorMode": "text",
+          "axisCenteredZero": false,
+          "barAlignment": 0,
+          "fillOpacity": 80,
+          "gradientMode": "none",
+          "lineWidth": 1,
+          "showPoints": "never",
+          "spanNulls": false,
+          "stacking": { "group": "A", "mode": "none" },
+          "scaleDistribution": { "type": "linear" },
+          "thresholdsStyle": { "mode": "off" }
+        },
+        "mappings": [],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+        "unit": "percentunit",
+        "decimals": 2
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "tooltip": { "mode": "single", "show": true },
+      "barWidth": 0.6,
+      "groupWidth": 0.7
+    },
+    "pluginVersion": "11.1.0",
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "format": "table",
+        "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n)\nSELECT\n    table_name AS `Table Name`,\n    CAST(AVG(CASE WHEN rn BETWEEN 37 AND 54 THEN `precision` ELSE NULL END) AS DECIMAL(10,4)) AS `Avg Precision L3`\nFROM RankedData\nGROUP BY table_name\nHAVING AVG(CASE WHEN rn BETWEEN 37 AND 54 THEN `precision` ELSE NULL END) IS NOT NULL\nORDER BY `Avg Precision L3` DESC;",
+        "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+      }
+    ]
+  },
+  {
+    "id": 12,
+    "gridPos": { "h": 7, "w": 8, "x": 0, "y": 58 },
+    "type": "barchart",
+    "title": "Avg Recall - Level 1 (Rows 1-18)",
+    "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+    "fieldConfig": {
+      "defaults": {
+        "color": { "mode": "palette-classic" },
+        "custom": {
+          "axisPlacement": "auto",
+          "axisLabel": "Average Recall",
+          "axisColorMode": "text",
+          "axisCenteredZero": false,
+          "barAlignment": 0,
+          "fillOpacity": 80,
+          "gradientMode": "none",
+          "lineWidth": 1,
+          "showPoints": "never",
+          "spanNulls": false,
+          "stacking": { "group": "A", "mode": "none" },
+          "scaleDistribution": { "type": "linear" },
+          "thresholdsStyle": { "mode": "off" }
+        },
+        "mappings": [],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+        "unit": "percentunit",
+        "decimals": 2
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "tooltip": { "mode": "single", "show": true },
+      "barWidth": 0.6,
+      "groupWidth": 0.7
+    },
+    "pluginVersion": "11.1.0",
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "format": "table",
+        "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n)\nSELECT\n    table_name AS `Table Name`,\n    CAST(AVG(CASE WHEN rn BETWEEN 1 AND 18 THEN `recall` ELSE NULL END) AS DECIMAL(10,4)) AS `Avg Recall L1`\nFROM RankedData\nGROUP BY table_name\nHAVING AVG(CASE WHEN rn BETWEEN 1 AND 18 THEN `recall` ELSE NULL END) IS NOT NULL\nORDER BY `Avg Recall L1` DESC;",
+        "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+      }
+    ]
+  },
+  {
+    "id": 13,
+    "gridPos": { "h": 7, "w": 8, "x": 8, "y": 58 },
+    "type": "barchart",
+    "title": "Avg Recall - Level 2 (Rows 19-36)",
+    "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+    "fieldConfig": {
+      "defaults": {
+        "color": { "mode": "palette-classic" },
+        "custom": {
+          "axisPlacement": "auto",
+          "axisLabel": "Average Recall",
+          "axisColorMode": "text",
+          "axisCenteredZero": false,
+          "barAlignment": 0,
+          "fillOpacity": 80,
+          "gradientMode": "none",
+          "lineWidth": 1,
+          "showPoints": "never",
+          "spanNulls": false,
+          "stacking": { "group": "A", "mode": "none" },
+          "scaleDistribution": { "type": "linear" },
+          "thresholdsStyle": { "mode": "off" }
+        },
+        "mappings": [],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+        "unit": "percentunit",
+        "decimals": 2
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "tooltip": { "mode": "single", "show": true },
+      "barWidth": 0.6,
+      "groupWidth": 0.7
+    },
+    "pluginVersion": "11.1.0",
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "format": "table",
+        "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n)\nSELECT\n    table_name AS `Table Name`,\n    CAST(AVG(CASE WHEN rn BETWEEN 19 AND 36 THEN `recall` ELSE NULL END) AS DECIMAL(10,4)) AS `Avg Recall L2`\nFROM RankedData\nGROUP BY table_name\nHAVING AVG(CASE WHEN rn BETWEEN 19 AND 36 THEN `recall` ELSE NULL END) IS NOT NULL\nORDER BY `Avg Recall L2` DESC;",
+        "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+      }
+    ]
+  },
+  {
+    "id": 14,
+    "gridPos": { "h": 7, "w": 8, "x": 16, "y": 58 },
+    "type": "barchart",
+    "title": "Avg Recall - Level 3 (Rows 37-54)",
+    "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+    "fieldConfig": {
+      "defaults": {
+        "color": { "mode": "palette-classic" },
+        "custom": {
+          "axisPlacement": "auto",
+          "axisLabel": "Average Recall",
+          "axisColorMode": "text",
+          "axisCenteredZero": false,
+          "barAlignment": 0,
+          "fillOpacity": 80,
+          "gradientMode": "none",
+          "lineWidth": 1,
+          "showPoints": "never",
+          "spanNulls": false,
+          "stacking": { "group": "A", "mode": "none" },
+          "scaleDistribution": { "type": "linear" },
+          "thresholdsStyle": { "mode": "off" }
+        },
+        "mappings": [],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+        "unit": "percentunit",
+        "decimals": 2
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "tooltip": { "mode": "single", "show": true },
+      "barWidth": 0.6,
+      "groupWidth": 0.7
+    },
+    "pluginVersion": "11.1.0",
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "format": "table",
+        "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n)\nSELECT\n    table_name AS `Table Name`,\n    CAST(AVG(CASE WHEN rn BETWEEN 37 AND 54 THEN `recall` ELSE NULL END) AS DECIMAL(10,4)) AS `Avg Recall L3`\nFROM RankedData\nGROUP BY table_name\nHAVING AVG(CASE WHEN rn BETWEEN 37 AND 54 THEN `recall` ELSE NULL END) IS NOT NULL\nORDER BY `Avg Recall L3` DESC;",
+        "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+      }
+    ]
+  },
+  {
+    "id": 15,
+    "gridPos": { "h": 7, "w": 8, "x": 0, "y": 68 },
+    "type": "barchart",
+    "title": "Avg Relevancy - Level 1 (Rows 1-18)",
+    "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+    "fieldConfig": {
+      "defaults": {
+        "color": { "mode": "palette-classic" },
+        "custom": {
+          "axisPlacement": "auto",
+          "axisLabel": "Average Relevancy",
+          "axisColorMode": "text",
+          "axisCenteredZero": false,
+          "barAlignment": 0,
+          "fillOpacity": 80,
+          "gradientMode": "none",
+          "lineWidth": 1,
+          "showPoints": "never",
+          "spanNulls": false,
+          "stacking": { "group": "A", "mode": "none" },
+          "scaleDistribution": { "type": "linear" },
+          "thresholdsStyle": { "mode": "off" }
+        },
+        "mappings": [],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+        "unit": "percentunit",
+        "decimals": 2
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "tooltip": { "mode": "single", "show": true },
+      "barWidth": 0.6,
+      "groupWidth": 0.7
+    },
+    "pluginVersion": "11.1.0",
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "format": "table",
+        "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n)\nSELECT\n    table_name AS `Table Name`,\n    CAST(AVG(CASE WHEN rn BETWEEN 1 AND 18 THEN `relevancy` ELSE NULL END) AS DECIMAL(10,4)) AS `Avg Relevancy L1`\nFROM RankedData\nGROUP BY table_name\nHAVING AVG(CASE WHEN rn BETWEEN 1 AND 18 THEN `relevancy` ELSE NULL END) IS NOT NULL\nORDER BY `Avg Relevancy L1` DESC;",
+        "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+      }
+    ]
+  },
+  {
+    "id": 16,
+    "gridPos": { "h": 7, "w": 8, "x": 8, "y": 68 },
+    "type": "barchart",
+    "title": "Avg Relevancy - Level 2 (Rows 19-36)",
+    "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+    "fieldConfig": {
+      "defaults": {
+        "color": { "mode": "palette-classic" },
+        "custom": {
+          "axisPlacement": "auto",
+          "axisLabel": "Average Relevancy",
+          "axisColorMode": "text",
+          "axisCenteredZero": false,
+          "barAlignment": 0,
+          "fillOpacity": 80,
+          "gradientMode": "none",
+          "lineWidth": 1,
+          "showPoints": "never",
+          "spanNulls": false,
+          "stacking": { "group": "A", "mode": "none" },
+          "scaleDistribution": { "type": "linear" },
+          "thresholdsStyle": { "mode": "off" }
+        },
+        "mappings": [],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+        "unit": "percentunit",
+        "decimals": 2
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "tooltip": { "mode": "single", "show": true },
+      "barWidth": 0.6,
+      "groupWidth": 0.7
+    },
+    "pluginVersion": "11.1.0",
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "format": "table",
+        "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n)\nSELECT\n    table_name AS `Table Name`,\n    CAST(AVG(CASE WHEN rn BETWEEN 19 AND 36 THEN `relevancy` ELSE NULL END) AS DECIMAL(10,4)) AS `Avg Relevancy L2`\nFROM RankedData\nGROUP BY table_name\nHAVING AVG(CASE WHEN rn BETWEEN 19 AND 36 THEN `relevancy` ELSE NULL END) IS NOT NULL\nORDER BY `Avg Relevancy L2` DESC;",
+        "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+      }
+    ]
+  },
+  {
+    "id": 17,
+    "gridPos": { "h": 7, "w": 8, "x": 16, "y": 68 },
+    "type": "barchart",
+    "title": "Avg Relevancy - Level 3 (Rows 37-54)",
+    "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+    "fieldConfig": {
+      "defaults": {
+        "color": { "mode": "palette-classic" },
+        "custom": {
+          "axisPlacement": "auto",
+          "axisLabel": "Average Relevancy",
+          "axisColorMode": "text",
+          "axisCenteredZero": false,
+          "barAlignment": 0,
+          "fillOpacity": 80,
+          "gradientMode": "none",
+          "lineWidth": 1,
+          "showPoints": "never",
+          "spanNulls": false,
+          "stacking": { "group": "A", "mode": "none" },
+          "scaleDistribution": { "type": "linear" },
+          "thresholdsStyle": { "mode": "off" }
+        },
+        "mappings": [],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+        "unit": "percentunit",
+        "decimals": 2
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "tooltip": { "mode": "single", "show": true },
+      "barWidth": 0.6,
+      "groupWidth": 0.7
+    },
+    "pluginVersion": "11.1.0",
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "format": "table",
+        "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n)\nSELECT\n    table_name AS `Table Name`,\n    CAST(AVG(CASE WHEN rn BETWEEN 37 AND 54 THEN `relevancy` ELSE NULL END) AS DECIMAL(10,4)) AS `Avg Relevancy L3`\nFROM RankedData\nGROUP BY table_name\nHAVING AVG(CASE WHEN rn BETWEEN 37 AND 54 THEN `relevancy` ELSE NULL END) IS NOT NULL\nORDER BY `Avg Relevancy L3` DESC;",
+        "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+      }
+    ]
+  },
+  {
+    "id": 18,
+    "gridPos": { "h": 7, "w": 8, "x": 0, "y": 78 },
+    "type": "barchart",
+    "title": "Avg Rouge1 - Level 1 (Rows 1-18)",
+    "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+    "fieldConfig": {
+      "defaults": {
+        "color": { "mode": "palette-classic" },
+        "custom": {
+          "axisPlacement": "auto",
+          "axisLabel": "Average Rouge1",
+          "axisColorMode": "text",
+          "axisCenteredZero": false,
+          "barAlignment": 0,
+          "fillOpacity": 80,
+          "gradientMode": "none",
+          "lineWidth": 1,
+          "showPoints": "never",
+          "spanNulls": false,
+          "stacking": { "group": "A", "mode": "none" },
+          "scaleDistribution": { "type": "linear" },
+          "thresholdsStyle": { "mode": "off" }
+        },
+        "mappings": [],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+        "unit": "short",
+        "decimals": 3
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "tooltip": { "mode": "single", "show": true },
+      "barWidth": 0.6,
+      "groupWidth": 0.7
+    },
+    "pluginVersion": "11.1.0",
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "format": "table",
+        "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n)\nSELECT\n    table_name AS `Table Name`,\n    CAST(AVG(CASE WHEN rn BETWEEN 1 AND 18 THEN `rouge1` ELSE NULL END) AS DECIMAL(10,4)) AS `Avg Rouge1 L1`\nFROM RankedData\nGROUP BY table_name\nHAVING AVG(CASE WHEN rn BETWEEN 1 AND 18 THEN `rouge1` ELSE NULL END) IS NOT NULL\nORDER BY `Avg Rouge1 L1` DESC;",
+        "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+      }
+    ]
+  },
+  {
+    "id": 19,
+    "gridPos": { "h": 7, "w": 8, "x": 8, "y": 78 },
+    "type": "barchart",
+    "title": "Avg Rouge1 - Level 2 (Rows 19-36)",
+    "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+    "fieldConfig": {
+      "defaults": {
+        "color": { "mode": "palette-classic" },
+        "custom": {
+          "axisPlacement": "auto",
+          "axisLabel": "Average Rouge1",
+          "axisColorMode": "text",
+          "axisCenteredZero": false,
+          "barAlignment": 0,
+          "fillOpacity": 80,
+          "gradientMode": "none",
+          "lineWidth": 1,
+          "showPoints": "never",
+          "spanNulls": false,
+          "stacking": { "group": "A", "mode": "none" },
+          "scaleDistribution": { "type": "linear" },
+          "thresholdsStyle": { "mode": "off" }
+        },
+        "mappings": [],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+        "unit": "short",
+        "decimals": 3
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "tooltip": { "mode": "single", "show": true },
+      "barWidth": 0.6,
+      "groupWidth": 0.7
+    },
+    "pluginVersion": "11.1.0",
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "format": "table",
+        "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n)\nSELECT\n    table_name AS `Table Name`,\n    CAST(AVG(CASE WHEN rn BETWEEN 19 AND 36 THEN `rouge1` ELSE NULL END) AS DECIMAL(10,4)) AS `Avg Rouge1 L2`\nFROM RankedData\nGROUP BY table_name\nHAVING AVG(CASE WHEN rn BETWEEN 19 AND 36 THEN `rouge1` ELSE NULL END) IS NOT NULL\nORDER BY `Avg Rouge1 L2` DESC;",
+        "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+      }
+    ]
+  },
+  {
+    "id": 20,
+    "gridPos": { "h": 7, "w": 8, "x": 16, "y": 78 },
+    "type": "barchart",
+    "title": "Avg Rouge1 - Level 3 (Rows 37-54)",
+    "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+    "fieldConfig": {
+      "defaults": {
+        "color": { "mode": "palette-classic" },
+        "custom": {
+          "axisPlacement": "auto",
+          "axisLabel": "Average Rouge1",
+          "axisColorMode": "text",
+          "axisCenteredZero": false,
+          "barAlignment": 0,
+          "fillOpacity": 80,
+          "gradientMode": "none",
+          "lineWidth": 1,
+          "showPoints": "never",
+          "spanNulls": false,
+          "stacking": { "group": "A", "mode": "none" },
+          "scaleDistribution": { "type": "linear" },
+          "thresholdsStyle": { "mode": "off" }
+        },
+        "mappings": [],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+        "unit": "short",
+        "decimals": 3
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "tooltip": { "mode": "single", "show": true },
+      "barWidth": 0.6,
+      "groupWidth": 0.7
+    },
+    "pluginVersion": "11.1.0",
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "format": "table",
+        "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n)\nSELECT\n    table_name AS `Table Name`,\n    CAST(AVG(CASE WHEN rn BETWEEN 37 AND 54 THEN `rouge1` ELSE NULL END) AS DECIMAL(10,4)) AS `Avg Rouge1 L3`\nFROM RankedData\nGROUP BY table_name\nHAVING AVG(CASE WHEN rn BETWEEN 37 AND 54 THEN `rouge1` ELSE NULL END) IS NOT NULL\nORDER BY `Avg Rouge1 L3` DESC;",
+        "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+      }
+    ]
+  },
+  {
+    "id": 21,
+    "gridPos": { "h": 7, "w": 8, "x": 0, "y": 88 },
+    "type": "barchart",
+    "title": "Avg Cosine Sim - Level 1 (Rows 1-18)",
+    "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+    "fieldConfig": {
+      "defaults": {
+        "color": { "mode": "palette-classic" },
+        "custom": {
+          "axisPlacement": "auto",
+          "axisLabel": "Average Cosine Similarity",
+          "axisColorMode": "text",
+          "axisCenteredZero": false,
+          "barAlignment": 0,
+          "fillOpacity": 80,
+          "gradientMode": "none",
+          "lineWidth": 1,
+          "showPoints": "never",
+          "spanNulls": false,
+          "stacking": { "group": "A", "mode": "none" },
+          "scaleDistribution": { "type": "linear" },
+          "thresholdsStyle": { "mode": "off" }
+        },
+        "mappings": [],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+        "unit": "percentunit",
+        "decimals": 2
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "tooltip": { "mode": "single", "show": true },
+      "barWidth": 0.6,
+      "groupWidth": 0.7
+    },
+    "pluginVersion": "11.1.0",
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "format": "table",
+        "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n)\nSELECT\n    table_name AS `Table Name`,\n    CAST(AVG(CASE WHEN rn BETWEEN 1 AND 18 THEN `cosine_similarity` ELSE NULL END) AS DECIMAL(10,4)) AS `Avg Cosine Sim L1`\nFROM RankedData\nGROUP BY table_name\nHAVING AVG(CASE WHEN rn BETWEEN 1 AND 18 THEN `cosine_similarity` ELSE NULL END) IS NOT NULL\nORDER BY `Avg Cosine Sim L1` DESC;",
+        "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+      }
+    ]
+  },
+  {
+    "id": 22,
+    "gridPos": { "h": 7, "w": 8, "x": 8, "y": 88 },
+    "type": "barchart",
+    "title": "Avg Cosine Sim - Level 2 (Rows 19-36)",
+    "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+    "fieldConfig": {
+      "defaults": {
+        "color": { "mode": "palette-classic" },
+        "custom": {
+          "axisPlacement": "auto",
+          "axisLabel": "Average Cosine Similarity",
+          "axisColorMode": "text",
+          "axisCenteredZero": false,
+          "barAlignment": 0,
+          "fillOpacity": 80,
+          "gradientMode": "none",
+          "lineWidth": 1,
+          "showPoints": "never",
+          "spanNulls": false,
+          "stacking": { "group": "A", "mode": "none" },
+          "scaleDistribution": { "type": "linear" },
+          "thresholdsStyle": { "mode": "off" }
+        },
+        "mappings": [],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+        "unit": "percentunit",
+        "decimals": 2
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "tooltip": { "mode": "single", "show": true },
+      "barWidth": 0.6,
+      "groupWidth": 0.7
+    },
+    "pluginVersion": "11.1.0",
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "format": "table",
+        "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n)\nSELECT\n    table_name AS `Table Name`,\n    CAST(AVG(CASE WHEN rn BETWEEN 19 AND 36 THEN `cosine_similarity` ELSE NULL END) AS DECIMAL(10,4)) AS `Avg Cosine Sim L2`\nFROM RankedData\nGROUP BY table_name\nHAVING AVG(CASE WHEN rn BETWEEN 19 AND 36 THEN `cosine_similarity` ELSE NULL END) IS NOT NULL\nORDER BY `Avg Cosine Sim L2` DESC;",
+        "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+      }
+    ]
+  },
+  {
+    "id": 23,
+    "gridPos": { "h": 7, "w": 8, "x": 16, "y": 88 },
+    "type": "barchart",
+    "title": "Avg Cosine Sim - Level 3 (Rows 37-54)",
+    "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+    "fieldConfig": {
+      "defaults": {
+        "color": { "mode": "palette-classic" },
+        "custom": {
+          "axisPlacement": "auto",
+          "axisLabel": "Average Cosine Similarity",
+          "axisColorMode": "text",
+          "axisCenteredZero": false,
+          "barAlignment": 0,
+          "fillOpacity": 80,
+          "gradientMode": "none",
+          "lineWidth": 1,
+          "showPoints": "never",
+          "spanNulls": false,
+          "stacking": { "group": "A", "mode": "none" },
+          "scaleDistribution": { "type": "linear" },
+          "thresholdsStyle": { "mode": "off" }
+        },
+        "mappings": [],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+        "unit": "percentunit",
+        "decimals": 2
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "tooltip": { "mode": "single", "show": true },
+      "barWidth": 0.6,
+      "groupWidth": 0.7
+    },
+    "pluginVersion": "11.1.0",
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "format": "table",
+        "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n)\nSELECT\n    table_name AS `Table Name`,\n    CAST(AVG(CASE WHEN rn BETWEEN 37 AND 54 THEN `cosine_similarity` ELSE NULL END) AS DECIMAL(10,4)) AS `Avg Cosine Sim L3`\nFROM RankedData\nGROUP BY table_name\nHAVING AVG(CASE WHEN rn BETWEEN 37 AND 54 THEN `cosine_similarity` ELSE NULL END) IS NOT NULL\nORDER BY `Avg Cosine Sim L3` DESC;",
+        "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+      }
+    ]
+  }
+
+  ,
+
+
+       {
+        "id": 24,
+        "gridPos": { "h": 7, "w": 12, "x": 0, "y": 98 },
+        "type": "barchart",
+        "title": "Precision Ranking (All Tables - Highest is Best)",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "axisPlacement": "auto",
+              "axisLabel": "Average Precision",
+              "axisColorMode": "text",
+              "axisCenteredZero": false,
+              "barAlignment": 0,
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "lineWidth": 1,
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": { "group": "A", "mode": "none" },
+              "scaleDistribution": { "type": "linear" },
+              "thresholdsStyle": { "mode": "off" }
+            },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+            "unit": "percentunit",
+            "decimals": 2
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+          "orientation": "horizontal",
+          "showValue": "always",
+          "tooltip": { "mode": "single", "show": true },
+          "barWidth": 0.6,
+          "groupWidth": 0.7
+        },
+        "pluginVersion": "11.1.0",
+        "targets": [
+          { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "table",
+            "rawSql": "SELECT table_name AS `Table Name`, CAST(avg_metric AS DECIMAL(10,4)) AS `Average Precision` FROM (SELECT 'vector_sparse_search_metrics' as table_name, AVG(`precision`) as avg_metric FROM vector_sparse_search_metrics UNION ALL SELECT 'vector_dense_search_metrics' as table_name, AVG(`precision`) as avg_metric FROM vector_dense_search_metrics UNION ALL SELECT 'vector_hybrid_search_metrics' as table_name, AVG(`precision`) as avg_metric FROM vector_hybrid_search_metrics UNION ALL SELECT 'graph_classical_drift_search_metrics' as table_name, AVG(`precision`) as avg_metric FROM graph_classical_drift_search_metrics UNION ALL SELECT 'graph_classical_global_search_metrics' as table_name, AVG(`precision`) as avg_metric FROM graph_classical_global_search_metrics UNION ALL SELECT 'graph_classical_local_search_metrics' as table_name, AVG(`precision`) as avg_metric FROM graph_classical_local_search_metrics UNION ALL SELECT 'graph_llm_drift_search_metrics' as table_name, AVG(`precision`) as avg_metric FROM graph_llm_drift_search_metrics UNION ALL SELECT 'graph_llm_global_search_metrics' as table_name, AVG(`precision`) as avg_metric FROM graph_llm_global_search_metrics UNION ALL SELECT 'graph_llm_local_search_metrics' as table_name, AVG(`precision`) as avg_metric FROM graph_llm_local_search_metrics) AS all_averages ORDER BY `Average Precision` DESC",
+            "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+          }
+         ]
+      },
+      {
+        "id": 25,
+        "gridPos": { "h": 7, "w": 12, "x": 12, "y": 98 },
+        "type": "barchart",
+        "title": "Recall Ranking (All Tables - Highest is Best)",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+             "custom": {
+              "axisPlacement": "auto",
+              "axisLabel": "Average Recall",
+              "axisColorMode": "text",
+              "axisCenteredZero": false,
+              "barAlignment": 0,
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "lineWidth": 1,
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": { "group": "A", "mode": "none" },
+              "scaleDistribution": { "type": "linear" },
+              "thresholdsStyle": { "mode": "off" }
+            },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+            "unit": "percentunit",
+            "decimals": 2
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+          "orientation": "horizontal",
+          "showValue": "always",
+          "tooltip": { "mode": "single", "show": true },
+          "barWidth": 0.6,
+          "groupWidth": 0.7
+        },
+        "pluginVersion": "11.1.0",
+        "targets": [
+          { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "table",
+            "rawSql": "SELECT table_name AS `Table Name`, CAST(avg_metric AS DECIMAL(10,4)) AS `Average Recall` FROM (SELECT 'vector_sparse_search_metrics' as table_name, AVG(`recall`) as avg_metric FROM vector_sparse_search_metrics UNION ALL SELECT 'vector_dense_search_metrics' as table_name, AVG(`recall`) as avg_metric FROM vector_dense_search_metrics UNION ALL SELECT 'vector_hybrid_search_metrics' as table_name, AVG(`recall`) as avg_metric FROM vector_hybrid_search_metrics UNION ALL SELECT 'graph_classical_drift_search_metrics' as table_name, AVG(`recall`) as avg_metric FROM graph_classical_drift_search_metrics UNION ALL SELECT 'graph_classical_global_search_metrics' as table_name, AVG(`recall`) as avg_metric FROM graph_classical_global_search_metrics UNION ALL SELECT 'graph_classical_local_search_metrics' as table_name, AVG(`recall`) as avg_metric FROM graph_classical_local_search_metrics UNION ALL SELECT 'graph_llm_drift_search_metrics' as table_name, AVG(`recall`) as avg_metric FROM graph_llm_drift_search_metrics UNION ALL SELECT 'graph_llm_global_search_metrics' as table_name, AVG(`recall`) as avg_metric FROM graph_llm_global_search_metrics UNION ALL SELECT 'graph_llm_local_search_metrics' as table_name, AVG(`recall`) as avg_metric FROM graph_llm_local_search_metrics) AS all_averages ORDER BY `Average Recall` DESC",
+            "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+          }
+         ]
+      },
+       {
+        "id": 26,
+        "gridPos": { "h": 7, "w": 12, "x": 0, "y": 108 },
+        "type": "barchart",
+        "title": "Relevancy Ranking (All Tables - Highest is Best)",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "axisPlacement": "auto",
+              "axisLabel": "Average Relevancy",
+              "axisColorMode": "text",
+              "axisCenteredZero": false,
+              "barAlignment": 0,
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "lineWidth": 1,
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": { "group": "A", "mode": "none" },
+              "scaleDistribution": { "type": "linear" },
+              "thresholdsStyle": { "mode": "off" }
+            },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+            "unit": "percentunit",
+            "decimals": 2
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+          "orientation": "horizontal",
+          "showValue": "always",
+          "tooltip": { "mode": "single", "show": true },
+          "barWidth": 0.6,
+          "groupWidth": 0.7
+        },
+        "pluginVersion": "11.1.0",
+        "targets": [
+          { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "table",
+            "rawSql": "SELECT table_name AS `Table Name`, CAST(avg_metric AS DECIMAL(10,4)) AS `Average Relevancy` FROM (SELECT 'vector_sparse_search_metrics' as table_name, AVG(relevancy) as avg_metric FROM vector_sparse_search_metrics UNION ALL SELECT 'vector_dense_search_metrics' as table_name, AVG(relevancy) as avg_metric FROM vector_dense_search_metrics UNION ALL SELECT 'vector_hybrid_search_metrics' as table_name, AVG(relevancy) as avg_metric FROM vector_hybrid_search_metrics UNION ALL SELECT 'graph_classical_drift_search_metrics' as table_name, AVG(relevancy) as avg_metric FROM graph_classical_drift_search_metrics UNION ALL SELECT 'graph_classical_global_search_metrics' as table_name, AVG(relevancy) as avg_metric FROM graph_classical_global_search_metrics UNION ALL SELECT 'graph_classical_local_search_metrics' as table_name, AVG(relevancy) as avg_metric FROM graph_classical_local_search_metrics UNION ALL SELECT 'graph_llm_drift_search_metrics' as table_name, AVG(relevancy) as avg_metric FROM graph_llm_drift_search_metrics UNION ALL SELECT 'graph_llm_global_search_metrics' as table_name, AVG(relevancy) as avg_metric FROM graph_llm_global_search_metrics UNION ALL SELECT 'graph_llm_local_search_metrics' as table_name, AVG(relevancy) as avg_metric FROM graph_llm_local_search_metrics) AS all_averages ORDER BY `Average Relevancy` DESC",
+            "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+          }
+         ]
+      },
+      {
+        "id": 27,
+        "gridPos": { "h": 7, "w": 12, "x": 12, "y": 108 },
+        "type": "barchart",
+        "title": "Time Taken Ranking (All Tables - Lower is Better)",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+             "custom": {
+              "axisPlacement": "auto",
+              "axisLabel": "Average Time (s)",
+              "axisColorMode": "text",
+              "axisCenteredZero": false,
+              "barAlignment": 0,
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "lineWidth": 1,
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": { "group": "A", "mode": "none" },
+              "scaleDistribution": { "type": "linear" },
+              "thresholdsStyle": { "mode": "off" }
+            },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+            "unit": "s",
+            "decimals": 3
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+          "orientation": "horizontal",
+          "showValue": "always",
+          "tooltip": { "mode": "single", "show": true },
+          "barWidth": 0.6,
+          "groupWidth": 0.7
+        },
+        "pluginVersion": "11.1.0",
+        "targets": [
+          { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "table",
+            "rawSql": "SELECT table_name AS `Table Name`, CAST(avg_metric AS DECIMAL(10,4)) AS `Average Time (s)` FROM (SELECT 'vector_sparse_search_metrics' as table_name, AVG(time_taken) as avg_metric FROM vector_sparse_search_metrics UNION ALL SELECT 'vector_dense_search_metrics' as table_name, AVG(time_taken) as avg_metric FROM vector_dense_search_metrics UNION ALL SELECT 'vector_hybrid_search_metrics' as table_name, AVG(time_taken) as avg_metric FROM vector_hybrid_search_metrics UNION ALL SELECT 'graph_classical_drift_search_metrics' as table_name, AVG(time_taken) as avg_metric FROM graph_classical_drift_search_metrics UNION ALL SELECT 'graph_classical_global_search_metrics' as table_name, AVG(time_taken) as avg_metric FROM graph_classical_global_search_metrics UNION ALL SELECT 'graph_classical_local_search_metrics' as table_name, AVG(time_taken) as avg_metric FROM graph_classical_local_search_metrics UNION ALL SELECT 'graph_llm_drift_search_metrics' as table_name, AVG(time_taken) as avg_metric FROM graph_llm_drift_search_metrics UNION ALL SELECT 'graph_llm_global_search_metrics' as table_name, AVG(time_taken) as avg_metric FROM graph_llm_global_search_metrics UNION ALL SELECT 'graph_llm_local_search_metrics' as table_name, AVG(time_taken) as avg_metric FROM graph_llm_local_search_metrics) AS all_averages ORDER BY `Average Time (s)` ASC",
+            "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+          }
+         ]
+      },
+      {
+        "id": 28,
+        "gridPos": { "h": 7, "w": 12, "x": 0, "y": 118 },
+        "type": "barchart",
+        "title": "Rouge1 Ranking (All Tables - Highest is Best)",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "axisPlacement": "auto",
+              "axisLabel": "Average Rouge1",
+              "axisColorMode": "text",
+              "axisCenteredZero": false,
+              "barAlignment": 0,
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "lineWidth": 1,
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": { "group": "A", "mode": "none" },
+              "scaleDistribution": { "type": "linear" },
+              "thresholdsStyle": { "mode": "off" }
+            },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+            "unit": "short",
+            "decimals": 3
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+          "orientation": "horizontal",
+          "showValue": "always",
+          "tooltip": { "mode": "single", "show": true },
+          "barWidth": 0.6,
+          "groupWidth": 0.7
+        },
+        "pluginVersion": "11.1.0",
+        "targets": [
+          { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "table",
+            "rawSql": "SELECT table_name AS `Table Name`, CAST(avg_metric AS DECIMAL(10,4)) AS `Average Rouge1` FROM (SELECT 'vector_sparse_search_metrics' as table_name, AVG(rouge1) as avg_metric FROM vector_sparse_search_metrics UNION ALL SELECT 'vector_dense_search_metrics' as table_name, AVG(rouge1) as avg_metric FROM vector_dense_search_metrics UNION ALL SELECT 'vector_hybrid_search_metrics' as table_name, AVG(rouge1) as avg_metric FROM vector_hybrid_search_metrics UNION ALL SELECT 'graph_classical_drift_search_metrics' as table_name, AVG(rouge1) as avg_metric FROM graph_classical_drift_search_metrics UNION ALL SELECT 'graph_classical_global_search_metrics' as table_name, AVG(rouge1) as avg_metric FROM graph_classical_global_search_metrics UNION ALL SELECT 'graph_classical_local_search_metrics' as table_name, AVG(rouge1) as avg_metric FROM graph_classical_local_search_metrics UNION ALL SELECT 'graph_llm_drift_search_metrics' as table_name, AVG(rouge1) as avg_metric FROM graph_llm_drift_search_metrics UNION ALL SELECT 'graph_llm_global_search_metrics' as table_name, AVG(rouge1) as avg_metric FROM graph_llm_global_search_metrics UNION ALL SELECT 'graph_llm_local_search_metrics' as table_name, AVG(rouge1) as avg_metric FROM graph_llm_local_search_metrics) AS all_averages ORDER BY `Average Rouge1` DESC",
+            "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+          }
+         ]
+      },
+      {
+        "id": 29,
+        "gridPos": { "h": 7, "w": 12, "x": 12, "y": 118 },
+        "type": "barchart",
+        "title": "Cosine Similarity Ranking (All Tables - Highest is Best)",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+             "custom": {
+              "axisPlacement": "auto",
+              "axisLabel": "Average Cosine Similarity",
+              "axisColorMode": "text",
+              "axisCenteredZero": false,
+              "barAlignment": 0,
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "lineWidth": 1,
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": { "group": "A", "mode": "none" },
+              "scaleDistribution": { "type": "linear" },
+              "thresholdsStyle": { "mode": "off" }
+            },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+            "unit": "short",
+            "decimals": 3
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+          "orientation": "horizontal",
+          "showValue": "always",
+          "tooltip": { "mode": "single", "show": true },
+          "barWidth": 0.6,
+          "groupWidth": 0.7
+        },
+        "pluginVersion": "11.1.0",
+        "targets": [
+          { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "table",
+            "rawSql": "SELECT table_name AS `Table Name`, CAST(avg_metric AS DECIMAL(10,4)) AS `Average Cosine Similarity` FROM (SELECT 'vector_sparse_search_metrics' as table_name, AVG(cosine_similarity) as avg_metric FROM vector_sparse_search_metrics UNION ALL SELECT 'vector_dense_search_metrics' as table_name, AVG(cosine_similarity) as avg_metric FROM vector_dense_search_metrics UNION ALL SELECT 'vector_hybrid_search_metrics' as table_name, AVG(cosine_similarity) as avg_metric FROM vector_hybrid_search_metrics UNION ALL SELECT 'graph_classical_drift_search_metrics' as table_name, AVG(cosine_similarity) as avg_metric FROM graph_classical_drift_search_metrics UNION ALL SELECT 'graph_classical_global_search_metrics' as table_name, AVG(cosine_similarity) as avg_metric FROM graph_classical_global_search_metrics UNION ALL SELECT 'graph_classical_local_search_metrics' as table_name, AVG(cosine_similarity) as avg_metric FROM graph_classical_local_search_metrics UNION ALL SELECT 'graph_llm_drift_search_metrics' as table_name, AVG(cosine_similarity) as avg_metric FROM graph_llm_drift_search_metrics UNION ALL SELECT 'graph_llm_global_search_metrics' as table_name, AVG(cosine_similarity) as avg_metric FROM graph_llm_global_search_metrics UNION ALL SELECT 'graph_llm_local_search_metrics' as table_name, AVG(cosine_similarity) as avg_metric FROM graph_llm_local_search_metrics) AS all_averages ORDER BY `Average Cosine Similarity` DESC",
+            "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+          }
+         ]
+      },
+      {
+        "id": 30,
+        "gridPos": { "h": 7, "w": 12, "x": 0, "y": 128 },
+        "type": "barchart",
+        "title": "Input Token Ranking (All Tables - Lower is Better)",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "axisPlacement": "auto",
+              "axisLabel": "Average Input Tokens",
+              "axisColorMode": "text",
+              "axisCenteredZero": false,
+              "barAlignment": 0,
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "lineWidth": 1,
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": { "group": "A", "mode": "none" },
+              "scaleDistribution": { "type": "linear" },
+              "thresholdsStyle": { "mode": "off" }
+            },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+            "unit": "none",
+            "decimals": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+          "orientation": "horizontal",
+          "showValue": "always",
+          "tooltip": { "mode": "single", "show": true },
+          "barWidth": 0.6,
+          "groupWidth": 0.7
+        },
+        "pluginVersion": "11.1.0",
+        "targets": [
+          { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "table",
+            "rawSql": "SELECT table_name AS `Table Name`, CAST(avg_metric AS DECIMAL(10,0)) AS `Average Input Tokens` FROM (SELECT 'vector_sparse_search_metrics' as table_name, AVG(num_input_token) as avg_metric FROM vector_sparse_search_metrics UNION ALL SELECT 'vector_dense_search_metrics' as table_name, AVG(num_input_token) as avg_metric FROM vector_dense_search_metrics UNION ALL SELECT 'vector_hybrid_search_metrics' as table_name, AVG(num_input_token) as avg_metric FROM vector_hybrid_search_metrics UNION ALL SELECT 'graph_classical_drift_search_metrics' as table_name, AVG(num_input_token) as avg_metric FROM graph_classical_drift_search_metrics UNION ALL SELECT 'graph_classical_global_search_metrics' as table_name, AVG(num_input_token) as avg_metric FROM graph_classical_global_search_metrics UNION ALL SELECT 'graph_classical_local_search_metrics' as table_name, AVG(num_input_token) as avg_metric FROM graph_classical_local_search_metrics UNION ALL SELECT 'graph_llm_drift_search_metrics' as table_name, AVG(num_input_token) as avg_metric FROM graph_llm_drift_search_metrics UNION ALL SELECT 'graph_llm_global_search_metrics' as table_name, AVG(num_input_token) as avg_metric FROM graph_llm_global_search_metrics UNION ALL SELECT 'graph_llm_local_search_metrics' as table_name, AVG(num_input_token) as avg_metric FROM graph_llm_local_search_metrics) AS all_averages ORDER BY `Average Input Tokens` ASC",
+            "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+          }
+         ]
+      },
+      {
+        "id": 31,
+        "gridPos": { "h": 7, "w": 12, "x": 12, "y": 128 }, 
+        "type": "barchart",
+        "title": "Output Token Ranking (All Tables - Lower is Better)",
+        "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+             "custom": {
+              "axisPlacement": "auto",
+              "axisLabel": "Average Output Tokens",
+              "axisColorMode": "text",
+              "axisCenteredZero": false,
+              "barAlignment": 0,
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "lineWidth": 1,
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": { "group": "A", "mode": "none" },
+              "scaleDistribution": { "type": "linear" },
+              "thresholdsStyle": { "mode": "off" }
+            },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+            "unit": "none",
+            "decimals": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+          "orientation": "horizontal",
+          "showValue": "always",
+          "tooltip": { "mode": "single", "show": true },
+          "barWidth": 0.6,
+          "groupWidth": 0.7
+        },
+        "pluginVersion": "11.1.0",
+        "targets": [
+          { "refId": "A", "datasource": { "uid": "mysql-ba-main", "type": "mysql" }, "format": "table",
+            "rawSql": "SELECT table_name AS `Table Name`, CAST(avg_metric AS DECIMAL(10,0)) AS `Average Output Tokens` FROM (SELECT 'vector_sparse_search_metrics' as table_name, AVG(num_output_token) as avg_metric FROM vector_sparse_search_metrics UNION ALL SELECT 'vector_dense_search_metrics' as table_name, AVG(num_output_token) as avg_metric FROM vector_dense_search_metrics UNION ALL SELECT 'vector_hybrid_search_metrics' as table_name, AVG(num_output_token) as avg_metric FROM vector_hybrid_search_metrics UNION ALL SELECT 'graph_classical_drift_search_metrics' as table_name, AVG(num_output_token) as avg_metric FROM graph_classical_drift_search_metrics UNION ALL SELECT 'graph_classical_global_search_metrics' as table_name, AVG(num_output_token) as avg_metric FROM graph_classical_global_search_metrics UNION ALL SELECT 'graph_classical_local_search_metrics' as table_name, AVG(num_output_token) as avg_metric FROM graph_classical_local_search_metrics UNION ALL SELECT 'graph_llm_drift_search_metrics' as table_name, AVG(num_output_token) as avg_metric FROM graph_llm_drift_search_metrics UNION ALL SELECT 'graph_llm_global_search_metrics' as table_name, AVG(num_output_token) as avg_metric FROM graph_llm_global_search_metrics UNION ALL SELECT 'graph_llm_local_search_metrics' as table_name, AVG(num_output_token) as avg_metric FROM graph_llm_local_search_metrics) AS all_averages ORDER BY `Average Output Tokens` ASC",
+            "sql": { "columns": [], "groupBy": [], "limit": 10000, "orderBy": [], "policy": "default", "refId": "A", "select": [], "from": "" }
+          }
+         ]
+      },    
+
+ 
+
+
+
+  
+
+  
+  {
+    "id": 32,
+    "gridPos": { "h": 8, "w": 24, "x": 0, "y": 187 },
+    "type": "table",
+    "title": "Graph Analysis Statistics",
+    "datasource": {
+      "uid": "mysql-ba-main",
+      "type": "mysql"
+    },
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": {
+          "uid": "mysql-ba-main",
+          "type": "mysql"
+        },
+        "format": "table",
+        "rawSql": "SELECT \n  graph_type,\n  number_of_nodes,\n  number_of_relationships,\n  mean_distance,\n  diameter,\n  radius,\n  num_wcc,\n  largest_wcc_size,\n  num_scc,\n  largest_scc_size,\n communities_level_1 AS `Community Size (L1)`,\n  communities_level_2 AS `Community (L2)`,\n  communities_level_3 AS `Community (L3)`\nFROM graph_analysis_stats;",
+          "sql": {
+          "columns": [],
+          "groupBy": [],
+          "limit": 50,
+          "orderBy": [],
+          "policy": "default",
+          "refId": "A",
+          "select": [],
+          "from": ""
+        },
+        "hide": false
+      }
+    ],
+    "options": {
+      "showHeader": true,
+      "sortBy": [
+        {
+          "displayName": "graph_type",
+          "desc": false
+        }
+      ],
+      "footer": {
+          "show": false,
+          "reducer": [
+              "count"
+          ],
+          "fields": ""
+      },
+      "reduceOptions": {
+          "values": false,
+          "calcs": [
+              "lastNotNull"
+          ],
+          "fields": ""
+      },
+      "cellHeight": "sm",
+      "striped": false
+    },
+    "fieldConfig": {
+      "defaults": {
+        "color": {
+          "mode": "thresholds"
+        },
+        "mappings": [],
+        "thresholds": {
+          "mode": "absolute",
+          "steps": [
+            { "color": "green", "value": null }
+          ]
+        },
+        "custom": {
+          "align": "auto",
+          "displayMode": "auto",
+          "filterable": false,
+          "hidden": false
+        },
+        "unit": "none",
+        "decimals": null
+      },
+      "overrides": [
+         {
+          "matcher": {
+            "id": "byName",
+            "options": "mean_distance"
+          },
+          "properties": [
+            {
+              "id": "decimals",
+              "value": 2
+            },
+            {
+               "id": "maxWidth",
+               "value": "right"
+            }
+          ]
+        },
+         {
+          "matcher": {
+            "id": "byRegexp",
+            "options": "/^(number_of_|diameter|radius|num_wcc|largest_wcc_size|num_scc|largest_scc_size|communities_level_)/"
+          },
+          "properties": [
+             {
+               "id": "maxWidth",
+               "value": 60
+            },
+             {
+               "id": "decimals",
+               "value": 0
+             }
+          ]
+        },
+         {
+          "matcher": {
+            "id": "byType",
+            "options": "number"
+          },
+          "properties": [
+             {
+               "id": "maxWidth",
+               "value": 100
+            }
+          ]
+        }
+
+
+      ]
+    },
+    "pluginVersion": "11.1.0"
+  },
+
+
+
+
+        
+  {
+    "id": 33,
+    "gridPos": { "h": 10, "w": 12, "x": 0, "y": 197 },
+    "type": "table",
+    "title": "Level 1 Avg Score Ranking (Rows 1-18 - Higher is Best)",
+    "datasource": {
+        "uid": "mysql-ba-main",
+        "type": "mysql"
+    },
+    "targets": [
+        {
+            "refId": "A",
+            "datasource": {
+                "uid": "mysql-ba-main",
+                "type": "mysql"
+            },
+            "format": "table",
+            "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n),\nTableScores AS (\n    SELECT\n        table_name AS `Table Name`,\n        AVG(CASE WHEN rn BETWEEN 1 AND 18 THEN (`precision` + `recall` + `relevancy` + `rouge1` + `cosine_similarity`) / 5 ELSE NULL END) AS `Level 1 Avg Score`,\n        AVG(CASE WHEN rn BETWEEN 19 AND 36 THEN (`precision` + `recall` + `relevancy` + `rouge1` + `cosine_similarity`) / 5 ELSE NULL END) AS `Level 2 Avg Score`,\n        AVG(CASE WHEN rn BETWEEN 37 AND 54 THEN (`precision` + `recall` + `relevancy` + `rouge1` + `cosine_similarity`) / 5 ELSE NULL END) AS `Level 3 Avg Score`,\n         AVG((`precision` + `recall` + `relevancy` + `rouge1` + `cosine_similarity`) / 5) AS `Overall Avg Score`\n    FROM RankedData\n    GROUP BY table_name\n)\nSELECT\n    ROW_NUMBER() OVER (ORDER BY `Level 1 Avg Score` DESC) AS `Rank`,\n    `Table Name`,\n    CAST(`Level 1 Avg Score` AS DECIMAL(10,4)) AS `Level 1 Avg Score`\nFROM TableScores\nORDER BY `Rank` ASC;",
+            "sql": {},
+            "hide": false
+        }
+    ],
+    "options": {
+        "showHeader": true,
+        "sortBy": [ { "displayName": "Rank", "desc": false } ],
+        "footer": { "show": false },
+        "reduceOptions": { "values": false, "calcs": [ "lastNotNull" ], "fields": "" },
+        "cellHeight": "sm",
+        "striped": false
+    },
+    "fieldConfig": {
+        "defaults": {
+            "color": { "mode": "thresholds" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+            "custom": { "align": "auto", "displayMode": "auto", "filterable": false, "hidden": false },
+            "unit": "percentunit", "decimals": 2
+        },
+        "overrides": [
+            { "matcher": { "id": "byName", "options": "Rank" }, "properties": [ { "id": "decimals", "value": 0 }, { "id": "minWidth", "value": 50 }, { "id": "custom.align", "value": "center" }, { "id": "unit", "value": "none" } ] },
+            { "matcher": { "id": "byName", "options": "Table Name" }, "properties": [ { "id": "minWidth", "value": 200 }, { "id": "custom.align", "value": "left" } ] },
+            { "matcher": { "id": "byName", "options": "Level 1 Avg Score" }, "properties": [ { "id": "decimals", "value": 2 }, { "id": "unit", "value": "percentunit" }, { "id": "minWidth", "value": 120 } ] }
+        ]
+    },
+    "pluginVersion": "11.1.0"
+},
+
+{
+  "id": 34,
+  "gridPos": { "h": 10, "w": 12, "x": 12, "y": 207 },
+  "type": "table",
+  "title": "Level 2 Avg Score Ranking (Rows 19-36 - Higher is Best)",
+  "datasource": {
+      "uid": "mysql-ba-main",
+      "type": "mysql"
+  },
+  "targets": [
+      {
+          "refId": "A",
+          "datasource": {
+              "uid": "mysql-ba-main",
+              "type": "mysql"
+          },
+          "format": "table",
+          "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n),\nTableScores AS (\n    SELECT\n        table_name AS `Table Name`,\n        AVG(CASE WHEN rn BETWEEN 1 AND 18 THEN (`precision` + `recall` + `relevancy` + `rouge1` + `cosine_similarity`) / 5 ELSE NULL END) AS `Level 1 Avg Score`,\n        AVG(CASE WHEN rn BETWEEN 19 AND 36 THEN (`precision` + `recall` + `relevancy` + `rouge1` + `cosine_similarity`) / 5 ELSE NULL END) AS `Level 2 Avg Score`,\n        AVG(CASE WHEN rn BETWEEN 37 AND 54 THEN (`precision` + `recall` + `relevancy` + `rouge1` + `cosine_similarity`) / 5 ELSE NULL END) AS `Level 3 Avg Score`,\n         AVG((`precision` + `recall` + `relevancy` + `rouge1` + `cosine_similarity`) / 5) AS `Overall Avg Score`\n    FROM RankedData\n    GROUP BY table_name\n)\nSELECT\n    ROW_NUMBER() OVER (ORDER BY `Level 2 Avg Score` DESC) AS `Rank`,\n    `Table Name`,\n    CAST(`Level 2 Avg Score` AS DECIMAL(10,4)) AS `Level 2 Avg Score`\nFROM TableScores\nORDER BY `Rank` ASC;",
+          "sql": {},
+          "hide": false
+      }
+  ],
+  "options": {
+      "showHeader": true,
+      "sortBy": [ { "displayName": "Rank", "desc": false } ],
+      "footer": { "show": false },
+      "reduceOptions": { "values": false, "calcs": [ "lastNotNull" ], "fields": "" },
+      "cellHeight": "sm",
+      "striped": false
+  },
+  "fieldConfig": {
+      "defaults": {
+          "color": { "mode": "thresholds" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+          "custom": { "align": "auto", "displayMode": "auto", "filterable": false, "hidden": false },
+          "unit": "percentunit", "decimals": 2
+      },
+      "overrides": [
+          { "matcher": { "id": "byName", "options": "Rank" }, "properties": [ { "id": "decimals", "value": 0 }, { "id": "minWidth", "value": 50 }, { "id": "custom.align", "value": "center" }, { "id": "unit", "value": "none" } ] },
+          { "matcher": { "id": "byName", "options": "Table Name" }, "properties": [ { "id": "minWidth", "value": 200 }, { "id": "custom.align", "value": "left" } ] },
+          { "matcher": { "id": "byName", "options": "Level 2 Avg Score" }, "properties": [ { "id": "decimals", "value": 2 }, { "id": "unit", "value": "percentunit" }, { "id": "minWidth", "value": 120 } ] }
+      ]
+  },
+  "pluginVersion": "11.1.0"
+},
+
+
+{
+  "id": 35,
+  "gridPos": { "h": 10, "w": 12, "x": 0, "y": 217 },
+  "type": "table",
+  "title": "Level 3 Avg Score Ranking (Rows 37-54 - Higher is Best)",
+  "datasource": {
+      "uid": "mysql-ba-main",
+      "type": "mysql"
+  },
+  "targets": [
+      {
+          "refId": "A",
+          "datasource": {
+              "uid": "mysql-ba-main",
+              "type": "mysql"
+          },
+          "format": "table",
+          "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n),\nTableScores AS (\n    SELECT\n        table_name AS `Table Name`,\n        AVG(CASE WHEN rn BETWEEN 1 AND 18 THEN (`precision` + `recall` + `relevancy` + `rouge1` + `cosine_similarity`) / 5 ELSE NULL END) AS `Level 1 Avg Score`,\n        AVG(CASE WHEN rn BETWEEN 19 AND 36 THEN (`precision` + `recall` + `relevancy` + `rouge1` + `cosine_similarity`) / 5 ELSE NULL END) AS `Level 2 Avg Score`,\n        AVG(CASE WHEN rn BETWEEN 37 AND 54 THEN (`precision` + `recall` + `relevancy` + `rouge1` + `cosine_similarity`) / 5 ELSE NULL END) AS `Level 3 Avg Score`,\n         AVG((`precision` + `recall` + `relevancy` + `rouge1` + `cosine_similarity`) / 5) AS `Overall Avg Score`\n    FROM RankedData\n    GROUP BY table_name\n)\nSELECT\n    ROW_NUMBER() OVER (ORDER BY `Level 3 Avg Score` DESC) AS `Rank`,\n    `Table Name`,\n    CAST(`Level 3 Avg Score` AS DECIMAL(10,4)) AS `Level 3 Avg Score`\nFROM TableScores\nORDER BY `Rank` ASC;",
+          "sql": {},
+          "hide": false
+      }
+  ],
+  "options": {
+      "showHeader": true,
+      "sortBy": [ { "displayName": "Rank", "desc": false } ],
+      "footer": { "show": false },
+      "reduceOptions": { "values": false, "calcs": [ "lastNotNull" ], "fields": "" },
+      "cellHeight": "sm",
+      "striped": false
+  },
+  "fieldConfig": {
+      "defaults": {
+          "color": { "mode": "thresholds" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+          "custom": { "align": "auto", "displayMode": "auto", "filterable": false, "hidden": false },
+          "unit": "percentunit", "decimals": 2
+      },
+      "overrides": [
+          { "matcher": { "id": "byName", "options": "Rank" }, "properties": [ { "id": "decimals", "value": 0 }, { "id": "minWidth", "value": 50 }, { "id": "custom.align", "value": "center" }, { "id": "unit", "value": "none" } ] },
+          { "matcher": { "id": "byName", "options": "Table Name" }, "properties": [ { "id": "minWidth", "value": 200 }, { "id": "custom.align", "value": "left" } ] },
+          { "matcher": { "id": "byName", "options": "Level 3 Avg Score" }, "properties": [ { "id": "decimals", "value": 2 }, { "id": "unit", "value": "percentunit" }, { "id": "minWidth", "value": 120 } ] }
+      ]
+  },
+  "pluginVersion": "11.1.0"
+},
+
+{
+  "id": 36,
+  "gridPos": { "h": 10, "w": 12, "x": 12, "y": 227 },
+  "type": "table",
+  "title": "Overall Avg Score Ranking (All Rows - Higher is Best)",
+  "datasource": {
+      "uid": "mysql-ba-main",
+      "type": "mysql"
+  },
+  "targets": [
+      {
+          "refId": "A",
+          "datasource": {
+              "uid": "mysql-ba-main",
+              "type": "mysql"
+          },
+          "format": "table",
+          "rawSql": "WITH RankedData AS (\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_sparse_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_sparse_search_metrics' ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_dense_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_dense_search_metrics' ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'vector_hybrid_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'vector_hybrid_search_metrics' ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_classical_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_classical_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_drift_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_drift_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_global_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_global_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `precision`, `recall`, `relevancy`, `rouge1`, `cosine_similarity`, 'graph_llm_local_search_metrics' AS table_name, ROW_NUMBER() OVER (PARTITION BY 'graph_llm_local_search_metrics' ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n),\nTableScores AS (\n    SELECT\n        table_name AS `Table Name`,\n        AVG(CASE WHEN rn BETWEEN 1 AND 18 THEN (`precision` + `recall` + `relevancy` + `rouge1` + `cosine_similarity`) / 5 ELSE NULL END) AS `Level 1 Avg Score`,\n        AVG(CASE WHEN rn BETWEEN 19 AND 36 THEN (`precision` + `recall` + `relevancy` + `rouge1` + `cosine_similarity`) / 5 ELSE NULL END) AS `Level 2 Avg Score`,\n        AVG(CASE WHEN rn BETWEEN 37 AND 54 THEN (`precision` + `recall` + `relevancy` + `rouge1` + `cosine_similarity`) / 5 ELSE NULL END) AS `Level 3 Avg Score`,\n         AVG((`precision` + `recall` + `relevancy` + `rouge1` + `cosine_similarity`) / 5) AS `Overall Avg Score`\n    FROM RankedData\n    GROUP BY table_name\n)\nSELECT\n    ROW_NUMBER() OVER (ORDER BY `Overall Avg Score` DESC) AS `Rank`,\n    `Table Name`,\n    CAST(`Overall Avg Score` AS DECIMAL(10,4)) AS `Overall Avg Score`\nFROM TableScores\nORDER BY `Rank` ASC;",
+          "sql": {},
+          "hide": false
+      }
+  ],
+  "options": {
+      "showHeader": true,
+      "sortBy": [ { "displayName": "Rank", "desc": false } ],
+      "footer": { "show": false },
+      "reduceOptions": { "values": false, "calcs": [ "lastNotNull" ], "fields": "" },
+      "cellHeight": "sm",
+      "striped": false
+  },
+  "fieldConfig": {
+      "defaults": {
+          "color": { "mode": "thresholds" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+          "custom": { "align": "auto", "displayMode": "auto", "filterable": false, "hidden": false },
+          "unit": "percentunit", "decimals": 2
+      },
+      "overrides": [
+          { "matcher": { "id": "byName", "options": "Rank" }, "properties": [ { "id": "decimals", "value": 0 }, { "id": "minWidth", "value": 50 }, { "id": "custom.align", "value": "center" }, { "id": "unit", "value": "none" } ] },
+          { "matcher": { "id": "byName", "options": "Table Name" }, "properties": [ { "id": "minWidth", "value": 200 }, { "id": "custom.align", "value": "left" } ] },
+          { "matcher": { "id": "byName", "options": "Overall Avg Score" }, "properties": [ { "id": "decimals", "value": 2 }, { "id": "unit", "value": "percentunit" }, { "id": "minWidth", "value": 120 } ] }
+      ]
+  },
+  "pluginVersion": "11.1.0"
+}
+,
+
+{
+  "id": 37,
+  "gridPos": { "h": 15, "w": 24, "x": 0, "y": 237 },
+  "type": "table",
+  "title": "Selected Query Details by Level and Retriever (Example Rows 1, 19, 37)",
+  "datasource": {
+      "uid": "mysql-ba-main",
+      "type": "mysql"
+  },
+  "targets": [
+      {
+          "refId": "A",
+          "datasource": {
+              "uid": "mysql-ba-main",
+              "type": "mysql"
+          },
+          "format": "table",
+          "rawSql": "WITH RankedData AS (\n    SELECT created_at, `query`, `search_type`, `retrieval_context`, `expected_output`, `actual_output`, ROW_NUMBER() OVER (PARTITION BY `search_type` ORDER BY created_at ASC) as rn FROM vector_sparse_search_metrics\n    UNION ALL\n    SELECT created_at, `query`, `search_type`, `retrieval_context`, `expected_output`, `actual_output`, ROW_NUMBER() OVER (PARTITION BY `search_type` ORDER BY created_at ASC) as rn FROM vector_dense_search_metrics\n    UNION ALL\n    SELECT created_at, `query`, `search_type`, `retrieval_context`, `expected_output`, `actual_output`, ROW_NUMBER() OVER (PARTITION BY `search_type` ORDER BY created_at ASC) as rn FROM vector_hybrid_search_metrics\n    UNION ALL\n    SELECT created_at, `query`, `search_type`, `retrieval_context`, `expected_output`, `actual_output`, ROW_NUMBER() OVER (PARTITION BY `search_type` ORDER BY created_at ASC) as rn FROM graph_classical_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `query`, `search_type`, `retrieval_context`, `expected_output`, `actual_output`, ROW_NUMBER() OVER (PARTITION BY `search_type` ORDER BY created_at ASC) as rn FROM graph_classical_global_search_metrics\n    UNION ALL\n    SELECT created_at, `query`, `search_type`, `retrieval_context`, `expected_output`, `actual_output`, ROW_NUMBER() OVER (PARTITION BY `search_type` ORDER BY created_at ASC) as rn FROM graph_classical_local_search_metrics\n    UNION ALL\n    SELECT created_at, `query`, `search_type`, `retrieval_context`, `expected_output`, `actual_output`, ROW_NUMBER() OVER (PARTITION BY `search_type` ORDER BY created_at ASC) as rn FROM graph_llm_drift_search_metrics\n    UNION ALL\n    SELECT created_at, `query`, `search_type`, `retrieval_context`, `expected_output`, `actual_output`, ROW_NUMBER() OVER (PARTITION BY `search_type` ORDER BY created_at ASC) as rn FROM graph_llm_global_search_metrics\n    UNION ALL\n    SELECT created_at, `query`, `search_type`, `retrieval_context`, `expected_output`, `actual_output`, ROW_NUMBER() OVER (PARTITION BY `search_type` ORDER BY created_at ASC) as rn FROM graph_llm_local_search_metrics\n) \nSELECT\n    -- Identify the level based on the row number\n    CASE rn\n        WHEN 1 THEN 'Level 1'\n        WHEN 19 THEN 'Level 2'\n        WHEN 37 THEN 'Level 3'\n        ELSE 'Unknown Level' -- Should not happen with the WHERE clause\n    END AS `Level`,\n    `query` AS `Query`,\n    `search_type` AS `Retriever Type`,\n    `retrieval_context` AS `Retrieval Context`,\n    `expected_output` AS `Expected Output`,\n    `actual_output` AS `Actual Output`\nFROM RankedData\nWHERE rn IN (1, 19, 37) -- Select the representative row numbers for each level\nORDER BY rn ASC, `search_type` ASC; -- Order by question level (based on rn) then retriever type\n",
+          "sql": {},
+          "hide": false
+      }
+  ],
+  "options": {
+      "showHeader": true,
+      "sortBy": [ { "displayName": "Level", "desc": false } ],
+      "footer": { "show": false },
+      "reduceOptions": { "values": false, "calcs": [ "lastNotNull" ], "fields": "" },
+      "cellHeight": "sm",
+      "striped": false
+  },
+  "fieldConfig": {
+      "defaults": {
+          "color": { "mode": "thresholds" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] },
+          "custom": { "align": "auto", "displayMode": "auto", "filterable": false, "hidden": false },
+          "unit": "none", "decimals": null
+      },
+      "overrides": [
+           {
+              "matcher": { "id": "byName", "options": "Level" },
+              "properties": [
+                   { "id": "minWidth", "value": 100 },
+                   { "id": "custom.align", "value": "center" }
+              ]
+          },
+          {
+              "matcher": { "id": "byName", "options": "Query" },
+              "properties": [
+                   { "id": "minWidth", "value": 250 },
+                   { "id": "custom.align", "value": "left" },
+                   { "id": "custom.displayMode", "value": "auto" }
+              ]
+          },
+          {
+              "matcher": { "id": "byName", "options": "Retriever Type" },
+              "properties": [
+                   { "id": "minWidth", "value": 180 },
+                   { "id": "custom.align", "value": "left" }
+              ]
+          },
+          {
+              "matcher": { "id": "byRegexp", "options": "/(Retrieval Context|Expected Output|Actual Output)/" },
+              "properties": [
+                   { "id": "minWidth", "value": 250 },
+                   { "id": "custom.displayMode", "value": "auto" }
+              ]
+          }
+      ]
+  },
+  "pluginVersion": "11.1.0"
+}
+
+      
+
+
+
+
+    ],
+    "preload": false,
+    "schemaVersion": 41,
+    "tags": ["vector-search", "graph-search", "metrics", "mysql", "sequence", "timeseries", "selectable"],
+    "templating": {
+      "list": [
+        {
+          "current": {},
+          "datasource": { "uid": "mysql-ba-main", "type": "mysql" },
+          "query": "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name REGEXP '^(vector_|graph_).*_search_metrics$'",
+          "hide": 0,
+          "includeAll": false,
+          "label": "Select Search Table",
+          "multi": false,
+          "name": "selected_table",
+          "options": [],
+          "refresh": 1,
+          "skipUrlSync": false,
+          "sort": 1,
+          "type": "query"
+        }
+      ]
+    },
+    "time": { "from": "now-6h", "to": "now" },
+    "timepicker": {},
+    "timezone": "browser",
+    "title": "Search Metrics Dashboard (Selectable Flow + Stats)",
+    "uid": null,
+    "version": 1,
+    "weekStart": ""
+  }

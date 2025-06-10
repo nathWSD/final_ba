@@ -1,0 +1,32 @@
+[
+    {
+        "graph_type": "Classical",
+        "number_of_nodes": 1036,
+        "number_of_relationships": 2834,
+        "communities_level_1": 70,
+        "communities_level_2": 297,
+        "communities_level_3": 642,
+        "mean_distance": 3.766782575099005,
+        "diameter": 11,
+        "radius": 6,
+        "num_wcc": 70,
+        "largest_wcc_size": 882,
+        "num_scc": 794,
+        "largest_scc_size": 204
+    },
+    {
+        "graph_type": "LLM",
+        "number_of_nodes": 611,
+        "number_of_relationships": 3564,
+        "communities_level_1": 10,
+        "communities_level_2": 116,
+        "communities_level_3": 477,
+        "mean_distance": 3.6416734668256856,
+        "diameter": 9,
+        "radius": 5,
+        "num_wcc": 2,
+        "largest_wcc_size": 608,
+        "num_scc": 430,
+        "largest_scc_size": 179
+    }
+]

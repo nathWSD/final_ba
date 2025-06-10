@@ -1,0 +1,110 @@
+
+services:
+  # --- Neo4j Service ---
+  neo4j:
+    image: neo4j:5
+    container_name: my_neo4j_service 
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_plugins:/plugins
+
+    environment:
+      NEO4J_AUTH: ${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD:?NEO4J_PASSWORD must be set in .env}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_allowlist: 'apoc.*'
+
+    restart: unless-stopped
+    healthcheck:
+        test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:7474"]
+        interval: 15s
+        timeout: 10s
+        retries: 10
+        start_period: 60s
+        
+  # --- MySQL Service ---
+  mysql:
+    image: mysql:8.0
+    container_name: ba_mysql_db 
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?MYSQL_DATABASE must be set in .env}
+      MYSQL_USER: ${MYSQL_USER:?MYSQL_USER must be set in .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set in .env}
+      TZ: Europe/Berlin
+    restart: unless-stopped
+    healthcheck:
+        test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+        interval: 15s      
+        timeout: 30s       
+        retries: 10       
+        start_period: 60s 
+                          
+
+  # --- Qdrant Service ---
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: ${QDRANT_CONTAINER_NAME:-ba_qdrant_vector_db} 
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage 
+    restart: unless-stopped
+    healthcheck:
+        test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:6333/readyz"]
+        interval: 5s
+        timeout: 3s
+        retries: 10
+
+  # --- Grafana Service ---
+  grafana:
+    image: ${GRAFANA_IMAGE_NAME:-grafana/grafana-oss:latest}
+    container_name: ${GRAFANA_CONTAINER_NAME:-grafana_service}
+    ports:
+      - "${GRAFANA_HOST_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./dashboards:/var/lib/grafana/dashboards:ro 
+    environment:
+      GF_DATABASE_TYPE: mysql
+      GF_DATABASE_HOST: mysql:3306
+      GF_DATABASE_NAME: ${MYSQL_DATABASE} 
+      GF_DATABASE_USER: ${MYSQL_USER}
+      GF_DATABASE_PASSWORD: ${MYSQL_PASSWORD}
+
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      TZ: Europe/Berlin
+      
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    healthcheck:
+        test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+
+volumes:
+  neo4j_data: {} 
+  neo4j_logs: {}
+  neo4j_plugins: {}
+  mysql_data: {}
+  qdrant_storage: {}
+  grafana_data: {}
