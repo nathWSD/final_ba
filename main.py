@@ -1,7 +1,6 @@
 import nest_asyncio
 try:
     nest_asyncio.apply()
-    print("nest_asyncio applied.")
 except Exception as e:
     print(f"Failed to apply nest_asyncio: {e}")
 from src.evaluation.evaluation_visualisation.visual_evaluation import grafana_visual_eval_data
@@ -68,9 +67,7 @@ urls = [
 
 async def main(ingest_all_data: bool, set_size:int = 34, questions_per_level: int = 2):
     
-    # Create driver for neo4j
     driver = create_neo4j_driver()
-    #driver = None
     if not driver:
         print("*********** Failed to establish Neo4j connection. Check your credentials and server status.**************")
         return
@@ -78,7 +75,6 @@ async def main(ingest_all_data: bool, set_size:int = 34, questions_per_level: in
     if ingest_all_data:
         # ingest the web content from the list of urls, clean the content and save it to txt
         dataset_path = await crawl_web.create_pipeline_dataset(urls=urls)
-        #dataset_path = os.path.join(os.getcwd(), 'src/ingestion_pipeline/web_site_dataset_creation/dataset/solar_system_clean.txt')
         # ingest the txt dataset to neo4j as graphs and qdrant as vectors
         graph_stats_path = ingestion_complete_data(driver, dataset_path)
         #after data ingestion we need to generate question from dataset with answers for evaluation    
@@ -86,12 +82,10 @@ async def main(ingest_all_data: bool, set_size:int = 34, questions_per_level: in
     
     else:
         json_qa_path = os.path.join(os.getcwd(), 'src/evaluation/question_answer_generator/qa_data.json')
-    #json_qa_path = os.path.join(os.getcwd(), 'src/evaluation/question_answer_generator/qa_data.json')
     
     graph_stats_path = os.path.join(os.getcwd(), 'src/ingestion_pipeline/graph_analysis_stats.json')     
     # after generating the questions and answers per level use the questions in the pipeline and evaluate the answers 
     retriever_and_metrics_analysis_pipeline(driver, json_qa_path)    
-    
     # run grafana visualization for all questions, answers and context for visualization
     grafana_visual_eval_data(graph_stats_path)
     
@@ -101,4 +95,4 @@ if __name__ == "__main__":
     #NOTE change collection name for different datasets in the .env file
     #NOTE use netstat -ano | findstr :<PORT> then taskkill /PID <PID> /F to free a port incase it is occupied
 
-    asyncio.run(main(ingest_all_data = False))    
+    asyncio.run(main(ingest_all_data = True))    

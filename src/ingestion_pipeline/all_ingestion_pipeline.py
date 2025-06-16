@@ -6,7 +6,6 @@ from src.ingestion_pipeline.vector_ingestion.vector_ingestion import run_vector_
 from src.ingestion_pipeline.graph_classical_model_ingestion.graph_classical_ingestion import classical_model_run_graph_ingestion
 from src.ingestion_pipeline.graph_llm_ingestion.graph_llm_data_ingestion import llm_model_run_graph_ingestion
 
-# Configure basic logging (optional)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def _calculate_graph_metrics(G):
@@ -16,31 +15,27 @@ def _calculate_graph_metrics(G):
     of the largest weakly connected component (LWCC).
     'mean_distance' is attempted on the largest strongly connected component (LSCC).
     """
-    # Initialize metrics strictly as requested
     metrics = {
         'mean_distance': None,
         'diameter': None,
         'radius': None,
-        'num_wcc': 0,  # Default to 0 instead of None for counts
+        'num_wcc': 0,  
         'largest_wcc_size': 0,
         'num_scc': 0,
         'largest_scc_size': 0,
     }
 
-    # --- Basic Checks ---
     if not isinstance(G, nx.DiGraph):
         logging.error("Input graph is not a NetworkX DiGraph. Metrics calculation requires a DiGraph.")
-        # Return defaults as calculations are invalid/misleading
         return metrics
 
     if G is None or G.number_of_nodes() == 0:
         logging.warning("Graph is None or empty, cannot calculate metrics.")
-        return metrics # Return initialized defaults
+        return metrics
 
     num_nodes = G.number_of_nodes()
 
-    # --- Weak Connectivity (Identifies components ignoring direction) ---
-    G_lwcc = None # Subgraph view of the largest WCC
+    G_lwcc = None
     largest_wcc_nodes = set()
     try:
         wccs = list(nx.weakly_connected_components(G))
@@ -49,17 +44,11 @@ def _calculate_graph_metrics(G):
             largest_wcc_nodes = max(wccs, key=len)
             metrics['largest_wcc_size'] = len(largest_wcc_nodes)
             if metrics['largest_wcc_size'] > 1:
-                 G_lwcc = G.subgraph(largest_wcc_nodes) # Create a view
-            # If size is 1 or 0, G_lwcc remains None or unused later
-        # else: num_wcc is 0 (already handled by len(wccs))
+                 G_lwcc = G.subgraph(largest_wcc_nodes)
 
     except Exception as e:
         logging.error(f"Error calculating weak connectivity: {e}")
-        # Metrics 'num_wcc' and 'largest_wcc_size' might remain 0
-
-
-    # --- Strong Connectivity (Identifies components respecting direction) ---
-    G_lscc = None # Subgraph view of the largest SCC
+    G_lscc = None 
     largest_scc_nodes = set()
     try:
         sccs = list(nx.strongly_connected_components(G))
@@ -68,48 +57,34 @@ def _calculate_graph_metrics(G):
             largest_scc_nodes = max(sccs, key=len)
             metrics['largest_scc_size'] = len(largest_scc_nodes)
             if metrics['largest_scc_size'] > 1:
-                 G_lscc = G.subgraph(largest_scc_nodes) # Create a view
-            # If size is 1 or 0, G_lscc remains None or unused later
-        # else: num_scc is 0 (already handled by len(sccs))
-
+                 G_lscc = G.subgraph(largest_scc_nodes) 
     except Exception as e:
         logging.error(f"Error calculating strong connectivity: {e}")
-        # Metrics 'num_scc' and 'largest_scc_size' might remain 0
-
-
-    # --- Distance Metrics ---
-
-    # 1. Mean Distance (Average Shortest Path)
-    #    Attempt calculation on the largest SCC if it's suitable (>1 node).
-    if G_lscc: # Check if G_lscc subgraph was created (i.e., LSCC size > 1)
+    if G_lscc: 
         try:
             metrics['mean_distance'] = nx.average_shortest_path_length(G_lscc)
             logging.info(f"Calculated 'mean_distance' on the largest SCC ({metrics['largest_scc_size']} nodes).")
         except nx.NetworkXError as e:
             logging.warning(f"Could not calculate 'mean_distance' on LSCC (NetworkXError: {e}). It might not be strongly connected internally or have issues.")
-            metrics['mean_distance'] = None # Ensure it's None on failure
+            metrics['mean_distance'] = None 
         except Exception as e:
             logging.error(f"Unexpected error calculating 'mean_distance' on LSCC: {e}")
             metrics['mean_distance'] = None
     elif metrics['largest_scc_size'] <= 1:
          logging.info("Skipping 'mean_distance' calculation (LSCC size <= 1).")
-         metrics['mean_distance'] = None # Explicitly None if LSCC too small
+         metrics['mean_distance'] = None 
 
-
-    # 2. Diameter and Radius (Based on Undirected LWCC)
-    if G_lwcc: # Check if G_lwcc subgraph was created (i.e., LWCC size > 1)
+    if G_lwcc: 
         try:
-            # Create a temporary UNDIRECTED COPY of the largest WCC
             G_lwcc_undirected = G_lwcc.to_undirected(as_view=False)
-
             if nx.is_connected(G_lwcc_undirected):
                  metrics['diameter'] = nx.diameter(G_lwcc_undirected)
                  metrics['radius'] = nx.radius(G_lwcc_undirected)
                  logging.info(f"Assigned 'diameter' and 'radius' based on the undirected version of the largest WCC ({metrics['largest_wcc_size']} nodes).")
             else:
                  logging.warning("Undirected version of LWCC is unexpectedly not connected. Setting diameter/radius to None.")
-                 metrics['diameter'] = None # Or float('inf') if preferred for failure
-                 metrics['radius'] = None   # Or float('inf')
+                 metrics['diameter'] = None 
+                 metrics['radius'] = None   
         except nx.NetworkXError as e:
              logging.warning(f"Could not calculate diameter/radius on undirected LWCC (NetworkXError: {e}).")
              metrics['diameter'] = None
@@ -119,17 +94,14 @@ def _calculate_graph_metrics(G):
             metrics['diameter'] = None
             metrics['radius'] = None
     elif metrics['largest_wcc_size'] == 1:
-        # A single-node component has diameter 0 and radius 0.
         logging.info("Largest WCC has size 1. Setting diameter=0, radius=0.")
         metrics['diameter'] = 0
         metrics['radius'] = 0
-    else: # No suitable LWCC found (e.g., graph was empty, or error finding WCCs)
+    else: 
         logging.warning("Skipping 'diameter' and 'radius' calculation (no suitable LWCC found).")
         metrics['diameter'] = None
         metrics['radius'] = None
-
     return metrics
-
 
 def analyse_and_store_graph_data(classical_graph_stats, 
                                  llm_graph_stats):
@@ -147,7 +119,6 @@ def analyse_and_store_graph_data(classical_graph_stats,
     Returns:
         str: The full path to the saved JSON file, or None if an error occurred.
     """
-    
     all_graph_data = []
     output_dir = os.path.join(os.getcwd(), 'src/ingestion_pipeline')
     
@@ -159,9 +130,6 @@ def analyse_and_store_graph_data(classical_graph_stats,
 
         logging.info(f"Analyzing '{graph_type}' graph...")
         stats = {'graph_type': graph_type}
-
-        # --- Basic Counts ---
-        # Use pre-calculated values if available, otherwise get from graph
         if 'number_of_nodes' in graph_results:
              stats['number_of_nodes'] = graph_results.get('number_of_nodes', 0)
         elif 'original_graph' in graph_results and graph_results['original_graph'] is not None:
@@ -178,9 +146,6 @@ def analyse_and_store_graph_data(classical_graph_stats,
             stats['number_of_relationships'] = 0
             logging.warning(f"Could not determine number of relationships for {graph_type} graph.")
 
-
-        # --- Community Counts ---
-        # Adjusting level names: L0 in code -> Level 1, L1 -> Level 2, L2 -> Level 3
         comm_l0 = graph_results.get('communities_L0')
         stats['communities_level_1'] = len(set(comm_l0.values())) if comm_l0 else 0
 
@@ -190,7 +155,6 @@ def analyse_and_store_graph_data(classical_graph_stats,
         comm_l2 = graph_results.get('communities_L2')
         stats['communities_level_3'] = len(set(comm_l2.values())) if comm_l2 else 0
 
-        # --- Advanced Metrics (Diameter, Radius, etc.) ---
         graph = graph_results.get('original_graph')
         if graph is not None and isinstance(graph, nx.Graph):
             advanced_metrics = _calculate_graph_metrics(graph)
@@ -204,11 +168,9 @@ def analyse_and_store_graph_data(classical_graph_stats,
         all_graph_data.append(stats)
         logging.info(f"Finished analyzing '{graph_type}' graph.")
 
-    # --- Save to JSON ---
     if not all_graph_data:
          logging.error("No graph data was analyzed. Cannot save JSON.")
          return None
-
     output_filename = "graph_analysis_stats.json"
     graph_json_path = os.path.join(output_dir, output_filename)
 
@@ -232,13 +194,11 @@ def ingestion_complete_data(driver, dataset_path):
     print(f"crawling done and text saved to {dataset_path}")
     llm_graph_stats_data = llm_model_run_graph_ingestion(driver, dataset_path)
     
-    graph_json_path = analyse_and_store_graph_data(classical_graph_stats_data, 
-                                                   llm_graph_stats_data) 
+    graph_json_path = analyse_and_store_graph_data(classical_graph_stats_data, llm_graph_stats_data) 
     
     print(">>> Finished classical_model_run_graph_ingestion") 
     run_vector_ingestion(dataset_path= dataset_path, model="gemini-2.0-flash-lite", temperature = 0.7) 
     
     print(">>> Exiting ingestion_complete_data")
-    
     return graph_json_path
     

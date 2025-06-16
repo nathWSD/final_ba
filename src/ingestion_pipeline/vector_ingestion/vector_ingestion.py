@@ -59,14 +59,10 @@ def generate_title(text, model, temperature):
     Text to analyze:
     {input_text}
     """
-     # Set up the chain
     prompt = ChatPromptTemplate.from_template(prompt_template)
     llm = helper_functions.gemini_llm(model, temperature)
     chain = prompt | llm | StrOutputParser()
-            
-            # Invoke the chain
     response = chain.invoke({"input_text": text})
-            
             
     # Parse the response
     extraction_result = parse_response_to_json(response)
@@ -105,7 +101,7 @@ def create_collections():
         print(f"Error loading embedding models: {e}")
         exit() 
 
-    # --- Get Dense Embedding Size (Needed for config) ---
+    # --- Get Dense Embedding Size---
     print("Calculating dense embedding size...")
     try:
         sample_embedding = list(dense_embedding_model.embed(["sample text"]))
@@ -173,7 +169,7 @@ def create_collections():
         print(f"Creating Sparse collection: {SPARSE_COLLECTION_NAME}")
         client.create_collection(
             collection_name=SPARSE_COLLECTION_NAME,
-            vectors_config=None, # No dense vectors needed
+            vectors_config=None, 
             sparse_vectors_config=sparse_vectors_config
         )
         print(f"Collection '{SPARSE_COLLECTION_NAME}' created.")
@@ -210,20 +206,17 @@ def ingest_data(dataset: Any, dense_embedding_model, sparse_embedding_model, cli
     )
 
     for batch in progress_bar:
-        # Get text data for the batch
         texts_to_embed = batch["text"]
         if not isinstance(texts_to_embed, list): 
              texts_to_embed = list(texts_to_embed)
 
-        # Calculate both types of embeddings
         try:
             dense_embeddings_batch = list(dense_embedding_model.embed(texts_to_embed))
             sparse_embeddings_batch = list(sparse_embedding_model.embed(texts_to_embed))
         except Exception as e:
             print(f"\nError during embedding calculation for a batch: {e}")
             continue 
-
-        # Prepare points for each collection
+        
         dense_points = []
         sparse_points = []
         hybrid_points = []
@@ -236,22 +229,18 @@ def ingest_data(dataset: Any, dense_embedding_model, sparse_embedding_model, cli
                 "text": texts_to_embed[i], 
             }
 
-            # Point for Dense Collection
             dense_points.append(models.PointStruct(
                 id=doc_id,
                 vector={DENSE_MODEL_KEY: dense_embeddings_batch[i].tolist()},
                 payload=payload_content
             ))
 
-            # Point for Sparse Collection
             sparse_points.append(models.PointStruct(
                 id=doc_id,
-                # Sparse vectors go in the main 'vector' dict, keyed by the name from config
                 vector={SPARSE_MODEL_KEY: sparse_embeddings_batch[i].as_object()},
                 payload=payload_content
             ))
 
-            # Point for Hybrid Collection
             hybrid_points.append(models.PointStruct(
                 id=doc_id,
                 vector={
@@ -277,9 +266,7 @@ def ingest_data(dataset: Any, dense_embedding_model, sparse_embedding_model, cli
 def run_vector_ingestion(dataset_path, model="gemini-2.0-flash-lite", temperature = 0.7):
     
     texts = helper_functions.create_texts_data(dataset_path)
-
     dataset = create_dataset(texts, model, temperature)   
-
     dense_embedding_model, sparse_embedding_model, client = create_collections()
     ingest_data(dataset= dataset, dense_embedding_model= dense_embedding_model, sparse_embedding_model=sparse_embedding_model , client = client) 
     logging.info("***** ingest done successfully *****")

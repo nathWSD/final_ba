@@ -11,8 +11,6 @@ from typing import Any, Dict, List
 import json
 from langchain_core.outputs import LLMResult, ChatGeneration
 from sentence_transformers import SentenceTransformer
-
-# LangChain callback system
 from langchain_core.callbacks import BaseCallbackHandler
 from src.ingestion_pipeline.helper_functions import TimeMeasurer
 
@@ -25,7 +23,7 @@ class GeminiTokenUsageCallbackHandler(BaseCallbackHandler):
     def __init__(self):
         super().__init__()
         self.prompt_tokens = 0
-        self.completion_tokens = 0 # Maps to output_tokens
+        self.completion_tokens = 0 
         self.total_tokens = 0
 
     def on_llm_start(
@@ -47,14 +45,12 @@ class GeminiTokenUsageCallbackHandler(BaseCallbackHandler):
             if not isinstance(gen, ChatGeneration):
                 continue
 
-            # Access usage_metadata on the message attribute
             if hasattr(gen, 'message') and hasattr(gen.message, 'usage_metadata'):
                 usage_metadata = gen.message.usage_metadata
                 if usage_metadata and isinstance(usage_metadata, dict):
                     prompt_tokens = usage_metadata.get("input_tokens")
                     completion_tokens = usage_metadata.get("output_tokens")
                     total_tokens = usage_metadata.get("total_tokens")
-
                     self.prompt_tokens += prompt_tokens
                     self.completion_tokens += completion_tokens
                     self.total_tokens += total_tokens
@@ -76,7 +72,6 @@ class GeminiTokenUsageCallbackHandler(BaseCallbackHandler):
         }
         
 def generate_response_langchain(query, context_, context_name, model):
-    
     template = """
         Your task is to answer the question using ONLY the information explicitly present in the provided context below.
 
@@ -99,13 +94,9 @@ def generate_response_langchain(query, context_, context_name, model):
         Answer based strictly on context:
     """
     measurer = TimeMeasurer()
-
     custom_rag_prompt = PromptTemplate.from_template(template)
-
     token_callback = GeminiTokenUsageCallbackHandler()
-
     llm = gemini_llm(model_name=model, temperature=0.0)
-
     rag_chain = (
         {"context": lambda _: context_, "question": RunnablePassthrough()}
         | custom_rag_prompt
@@ -117,7 +108,6 @@ def generate_response_langchain(query, context_, context_name, model):
     usage_data = {}
 
     try:
-        # Use the context manager to time the invoke call
         with measurer.measure('llm_invocation_time'):
             response = rag_chain.invoke(
                 query,
@@ -129,7 +119,7 @@ def generate_response_langchain(query, context_, context_name, model):
     except Exception as e:
         logging.error(f"Error during RAG chain invocation: {e}", exc_info=True)
         response = f"Error: Failed to generate response due to: {e}"
-        usage_data = token_callback.get_usage_dict() # Get potentially partial token data
+        usage_data = token_callback.get_usage_dict() 
 
     
     invocation_time = measurer.get_timing('llm_invocation_time')
@@ -174,24 +164,19 @@ def create_evaluation_object(
     response_obj['llm_response'] = llm_response
 
     # --- Context ---
-    # Extract context used for this specific generation run
     retrieved_context_str = retrieval_package.get('context')
-    # Store context as a list, as per original structure request
     response_obj['retrieval_context'] = [retrieved_context_str]
 
     # --- Token Usage ---
-    # Extract from the LLM usage data dictionary
     response_obj['num_input_token'] = llm_usage_data.get('prompt_tokens') # input tokens
     response_obj['num_output_token'] = llm_usage_data.get('completion_tokens') # output tokens
     response_obj['total_tokens'] = llm_usage_data.get('total_tokens') # total_tokens tokens
 
     # --- Timing ---
     retrieval_time = retrieval_package.get('retrieval_time_taken', 0.0)
-    llm_generation_time = llm_usage_data.get('time_taken', 0.0) # Time measured inside generate_response
-
-    # Calculate total time for this specific retrieval+generation path
+    llm_generation_time = llm_usage_data.get('time_taken', 0.0) 
     total_time = retrieval_time + llm_generation_time
-    response_obj['time_taken'] = total_time # Store the combined time
+    response_obj['time_taken'] = total_time 
 
     logging.info(f"Created evaluation object. Retrieval: {retrieval_time:.4f}s, LLM: {llm_generation_time:.4f}s, Total: {total_time:.4f}s")
 
@@ -223,16 +208,12 @@ def read_and_flatten_qa(json_path: str) -> List[Dict[str, str]]:
             return []
 
         logging.info(f"Reading QA data from '{json_path}'...")
-        # Iterate through the values of the top-level dictionary (which should be lists)
         for level_key, list_of_pairs in data.items():
             if isinstance(list_of_pairs, list):
-                # Iterate through the dictionaries within the list
                 for qa_pair in list_of_pairs:
-                    # Check if it's a dictionary and has the required keys with non-empty string values
                     if (isinstance(qa_pair, dict) and
                             'question' in qa_pair and isinstance(qa_pair['question'], str) and qa_pair['question'] and
                             'answer' in qa_pair and isinstance(qa_pair['answer'], str) and qa_pair['answer']):
-                        # Append a new dictionary containing only the essential keys
                         flat_qa_list.append({
                             'question': qa_pair['question'],
                             'answer': qa_pair['answer'],
@@ -264,14 +245,13 @@ def retriever_and_metrics_analysis_pipeline(driver, json_path):
     embedding_model = SentenceTransformer(os.getenv('DENSE_MODEL_KEY'))
     logging.info(f"loading embedding model {os.getenv('DENSE_MODEL_KEY')} done")        
 
-    # Empty the folder
     for filename in os.listdir(save_path_all_evaluation):
         file_path = os.path.join(save_path_all_evaluation, filename)
         try:
             if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)  # Remove the file
+                os.unlink(file_path)  
             elif os.path.isdir(file_path):
-                os.rmdir(file_path)  # Remove the directory if empty
+                os.rmdir(file_path) 
         except Exception as e:
             print(f"Failed to delete {file_path}. Reason: {e}")
             
@@ -289,15 +269,15 @@ def retriever_and_metrics_analysis_pipeline(driver, json_path):
         
         # Combine all retrievers into a list
         total_retriever_for_query = [
-            ("vector_dense_search_metrics", vector_dense_context),#vector_dense_search_metrics , vector_dense_context
-            ("vector_sparse_search_metrics", vector_sparse_context),# vector_sparse_search_metrics, vector_sparse_context
-            ("vector_hybrid_search_metrics", vector_hybrid_context),# vector_hybrid_search_metrics, vector_hybrid_context
-            ("graph_classical_global_search_metrics", global_DL_context),# graph_classical_global_search_metrics,  global_DL_context
-            ("graph_classical_local_search_metrics", local_DL_context), # graph_classical_local_search_metrics, local_DL_context
-            ("graph_classical_drift_search_metrics", drift_DL_context), #graph_classical_drift_search_metrics, drift_DL_context
-            ("graph_llm_global_search_metrics", global_LLM_context), # graph_llm_global_search_metrics, global_LLM_context
-            ("graph_llm_local_search_metrics", local_LLM_context), # graph_llm_local_search_metrics, local_LLM_context
-            ("graph_llm_drift_search_metrics", drift_LLM_context) # graph_llm_drift_search_metrics, drift_LLM_context
+            ("vector_dense_search_metrics", vector_dense_context),
+            ("vector_sparse_search_metrics", vector_sparse_context),
+            ("vector_hybrid_search_metrics", vector_hybrid_context),
+            ("graph_classical_global_search_metrics", global_DL_context),
+            ("graph_classical_local_search_metrics", local_DL_context), 
+            ("graph_classical_drift_search_metrics", drift_DL_context), 
+            ("graph_llm_global_search_metrics", global_LLM_context), 
+            ("graph_llm_local_search_metrics", local_LLM_context),
+            ("graph_llm_drift_search_metrics", drift_LLM_context) 
         ]
         
         for context_name, context_value in total_retriever_for_query:
@@ -318,10 +298,9 @@ def retriever_and_metrics_analysis_pipeline(driver, json_path):
             )
             
             all_evaluation_objects.append(response_obj_to_evaluate)
-                        
-            # Run evaluation and save metrics
+            # -- evaluation pipeline --            
             run_evaluation_metric(
-                file_name=context_name,  # Dynamically set the dedicated file name based on the context name
+                file_name=context_name, 
                 save_directory=save_path_all_evaluation,
                 response_obj=response_obj_to_evaluate,
                 embedding_model = embedding_model,

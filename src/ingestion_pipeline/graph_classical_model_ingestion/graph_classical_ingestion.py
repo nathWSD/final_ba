@@ -20,9 +20,7 @@ from dotenv import load_dotenv
 
 
 load_dotenv(dotenv_path=os.path.join(os.getcwd(), '.env'), override=True)
-
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
 output_dir = os.path.join(os.getcwd(), 'src/ingestion_pipeline/graph_classical_model_ingestion/rag_files')
 image_path = os.path.join(os.getcwd(), 'src/ingestion_pipeline/graph_classical_model_ingestion/classical_graph_images')
 
@@ -32,53 +30,38 @@ def generate_deterministic_id(text):
 
 def get_bert_contextual_description(text, entity, start_char, end_char, entity_type, tokenizer, model, context_window=100):
     """Generate a contextual description of an entity using BERT masked language modeling"""
-    # Get context around the entity (limited window size)
     start_context = max(0, start_char - context_window)
     end_context = min(len(text), end_char + context_window)
     context = text[start_context:end_context]
-    
-    # Calculate relative position of entity within the context
     entity_start_in_context = start_char - start_context
     entity_end_in_context = entity_start_in_context + (end_char - start_char)
-    
-    # Create a version with the entity masked
     context_with_mask = (
         context[:entity_start_in_context] + 
         tokenizer.mask_token + 
         context[entity_end_in_context:]
     )
-    
-    # Tokenize and get predictions
     inputs = tokenizer(context_with_mask, return_tensors="pt", truncation=True)
     mask_idx = torch.where(inputs["input_ids"][0] == tokenizer.mask_token_id)[0]
     
     if len(mask_idx) == 0:
-        # Fallback if masking fails
         return f"{entity_type} entity: {entity}. Found in context: \"{trim_to_complete_words(context, 50)}...\""
     
     with torch.no_grad():
         outputs = model(**inputs)
-    
-    # Get top predictions
     logits = outputs.logits
     mask_token_logits = logits[0, mask_idx, :]
     top_tokens = torch.topk(mask_token_logits, 5, dim=1).indices[0].tolist()
     predicted_tokens = [tokenizer.decode([token]).strip() for token in top_tokens]
-    
-    # Get context before and after for description
     context_before = context[:entity_start_in_context].strip()
     context_after = context[entity_end_in_context:].strip()
     
-    # Trim contexts to complete words for readability
     if len(context_before) > 60:
         context_before = " " + trim_to_complete_words(context_before, 60, trim_start=True)
     if len(context_after) > 60:
         context_after = trim_to_complete_words(context_after, 60) + " "
     
-    # Create descriptive text
     description = f"{entity_type} entity: {entity}. Context: \"{context_before} [ENTITY] {context_after}\". "
     description += f"Based on context, this likely refers to: {', '.join(predicted_tokens)}."
-    
     return description
 
 def trim_to_complete_words(text, max_length, trim_start=False):
@@ -97,7 +80,6 @@ def trim_to_complete_words(text, max_length, trim_start=False):
         return text
         
     if trim_start:
-        # Trim from the start - find first space after max_length characters from the end
         trimmed_text = text[-max_length:]
         space_pos = trimmed_text.find(' ')
         
@@ -105,7 +87,6 @@ def trim_to_complete_words(text, max_length, trim_start=False):
             return trimmed_text[space_pos+1:]
         return trimmed_text
     else:
-        # Trim from the end - find last space before max_length
         trimmed_text = text[:max_length]
         space_pos = trimmed_text.rfind(' ')
         
@@ -115,7 +96,6 @@ def trim_to_complete_words(text, max_length, trim_start=False):
 
 
 def split_into_sentences(text:str)->List[str]:
-    # Use regular expression to split text into sentences
     sentences = re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
     return sentences
 
@@ -165,7 +145,7 @@ def parse_rebel_output(text):
 
 def filter_triplets(
     triplets: List[Dict[str, Any]],
-    min_entity_len: int = 2 # Minimum character length for head/tail
+    min_entity_len: int = 2 
 ) -> List[Dict[str, Any]]:
     """
     Filters a list of triplets based on multiple criteria:
@@ -188,7 +168,6 @@ def filter_triplets(
         of the first valid occurrences.
     """
     filtered_list: List[Dict[str, Any]] = []
-    # Store the lowercased, stripped pair for seen check
     seen_head_tail_pairs: Set[Tuple[str, str]] = set()
 
     if not isinstance(triplets, list):
@@ -224,18 +203,14 @@ def filter_triplets(
             continue
 
         # --- Filter 4: Duplicate (Head, Tail) pair (Case-Insensitive) ---
-        # Use the lowercased, stripped strings for the unique pair check
         pair = (head_str.lower(), tail_str.lower())
 
         if pair not in seen_head_tail_pairs:
-            # This is the first time we see this valid (head, tail) combination.
             seen_head_tail_pairs.add(pair)
-            # Append the original triplet dictionary
             filtered_list.append(triplet)
         else:
             logging.debug(f"Skipping duplicate case-insensitive (head, tail) pair: {pair}")
-            pass # Skip duplicate
-
+            pass 
     return filtered_list
 
 
@@ -244,8 +219,8 @@ def get_ner_type_for_entity(
     entity_text: str,
     original_text: str,
     ner_pipeline: Pipeline,
-    similarity_threshold: float = 0.85, # Threshold for fallback matching (0.0 to 1.0)
-    debug: bool = False # Set to True for printing match details
+    similarity_threshold: float = 0.85, 
+    debug: bool = False 
 ) -> str:
     """
     Determines the NER type for a given entity text extracted by REBEL.
@@ -273,7 +248,7 @@ def get_ner_type_for_entity(
         if debug: print("Debug: Empty entity_text provided.")
         return default_type
 
-    entity_text = entity_text.strip() # Clean whitespace
+    entity_text = entity_text.strip()
 
     try:
         if debug: print(f"\nDebug: Running NER for entity '{entity_text}'...")
@@ -285,14 +260,11 @@ def get_ner_type_for_entity(
 
     except Exception as e:
         print(f"Error during NER inference: {e}")
-        return default_type # Fallback on NER error
+        return default_type 
 
     # --- 1. Exact Match Check ---
-    # Check if any NER entity's text exactly matches the REBEL entity text
     exact_matches = []
     for ner_entity in ner_results:
-        # ner_entity format depends on aggregation_strategy, assuming 'simple':
-        # {'entity_group': 'LOC', 'score': 0.99..., 'word': 'Milky Way', 'start': 179, 'end': 188}
         ner_word = ner_entity.get("word", "").strip()
         ner_type = ner_entity.get("entity_group")
 
@@ -300,8 +272,6 @@ def get_ner_type_for_entity(
             exact_matches.append(ner_entity)
 
     if exact_matches:
-        # If multiple exact text matches exist (rare but possible), maybe pick the highest score?
-        # For simplicity, let's take the first one found.
         matched_entity = exact_matches[0]
         entity_type = matched_entity.get("entity_group", default_type)
         if debug:
@@ -321,21 +291,13 @@ def get_ner_type_for_entity(
 
         if not ner_word or not ner_type:
             continue
-
-        # Calculate similarity (e.g., using SequenceMatcher ratio)
-        # Can be computationally intensive for very long texts/many entities
         similarity = difflib.SequenceMatcher(None, ner_word, entity_text).ratio()
 
         if similarity > best_similarity:
             best_similarity = similarity
-            # Check if similarity meets the threshold
             if similarity >= similarity_threshold:
-                 matched_type = ner_type # Tentative best match above threshold
-                 best_match_details = ner_entity # Store details for debugging
-            #else:
-                 # If the highest similarity is below threshold, reset matched_type
-                 # matched_type = default_type # Not needed if initialized correctly
-
+                 matched_type = ner_type 
+                 best_match_details = ner_entity  
     if debug:
         if matched_type != default_type and best_match_details:
             print(f"Debug: Best similarity match for '{entity_text}': NER Word='{best_match_details.get('word')}', Type='{matched_type}', Similarity={best_similarity:.4f} (Threshold={similarity_threshold})")
@@ -343,9 +305,6 @@ def get_ner_type_for_entity(
              print(f"Debug: Highest similarity found for '{entity_text}' was {best_similarity:.4f}, which is below threshold {similarity_threshold}. Falling back to '{default_type}'.")
         else:
              print("Debug: No potential similarity matches found.")
-
-
-    # Return the type of the best match above threshold, or default
     return matched_type
 
 
@@ -368,32 +327,25 @@ def extract_raw_triplets_from_sentence(
              outputs = rebel_model.generate(
                  inputs["input_ids"],
                  attention_mask=inputs["attention_mask"],
-                 max_length=512, # Max length for generation, might differ from input truncation
+                 max_length=512, 
                  num_beams=5,
-                 num_return_sequences=1, # Usually 1 is enough unless exploring alternatives
+                 num_return_sequences=1, 
                  output_scores=True,
                  return_dict_in_generate=True,
-                 early_stopping=True # Stop beams early if possible
+                 early_stopping=True 
              )
         sequence_scores = outputs.sequences_scores.tolist()
         decoded_preds = rebel_tokenizer.batch_decode(outputs.sequences, skip_special_tokens=False)
     except Exception as e:
         logging.error(f"REBEL generation failed for sentence: {sentence_text[:100]}... Error: {e}")
-        return [] # Return empty if generation fails
-
+        return [] 
 
     # --- Parsing and Filtering ---
     for i, decoded_sentence in enumerate(decoded_preds):
         # Parse the <triplet> <subj> ... structure
-        triplets = parse_rebel_output(decoded_sentence) # Ensure this handles the REBEL output format
-
-        # Apply basic filtering (length, self-reference, etc.)
-        # Adjust min_entity_len as needed
+        triplets = parse_rebel_output(decoded_sentence) 
         filtered_triplets = filter_triplets(triplets, min_entity_len=2)
-
         weight = float(sequence_scores[i]) if i < len(sequence_scores) else 0.0
-        # Use a more robust normalization if scores are log-probs
-        # Simple exp might not be bounded correctly, check REBEL documentation
         normalized_weight = round(min(1.0, max(0.0, float(np.exp(weight)))), 2) 
 
         for triplet in filtered_triplets:
@@ -418,7 +370,6 @@ def extract_raw_triplets_from_sentence(
                 'head_type': head_type, 
                 'tail_type': tail_type  
             })
-
     return raw_triplets_for_sentence
 
 
@@ -454,13 +405,10 @@ def aggregate_and_finalize_graph(
     """
     logging.info("Starting Graph Aggregation and Finalization...")
 
-    # --- Initialize Final Data Structures ---
     entities_accumulator = {}
-    normalized_relationships = [] # Renaming slightly as normalization is simpler now
+    normalized_relationships = []
     entity_frequency = defaultdict(int)
     entity_chunks = defaultdict(set)
-
-    # --- Iterate Through Raw Triplets for Aggregation ---
     logging.info("Aggregating entities and relationships...")
 
     for raw_triplet in all_raw_triplets:
@@ -471,13 +419,11 @@ def aggregate_and_finalize_graph(
         if not original_head or not original_tail or not chunk_id:
             logging.debug(f"Skipping incomplete raw triplet: {raw_triplet}")
             continue
-
-        # --- Direct Use of Original Entities (No Fuzzy Normalization) ---
-        # We still uppercase for consistency as entity keys
+        
         norm_head = original_head
         norm_tail = original_tail
 
-        if norm_head == norm_tail: # Still check for self-loops
+        if norm_head == norm_tail: 
             logging.debug(f"Skipping self-loop: {norm_head} -> {norm_tail}")
             continue
 
@@ -486,7 +432,6 @@ def aggregate_and_finalize_graph(
         rel_type = raw_triplet.get('type', 'related to')
         rel_weight = raw_triplet.get('weight', 0.5) 
 
-        # --- Accumulate Entity Data (with BERT Description Handling) ---
         for entity_title_upper, original_entity_text, entity_type_hint in [
                 (norm_head_upper, original_head, raw_triplet.get('head_type', 'UNKNOWN')),
                 (norm_tail_upper, original_tail, raw_triplet.get('tail_type', 'UNKNOWN'))]:
@@ -494,9 +439,8 @@ def aggregate_and_finalize_graph(
             entity_frequency[entity_title_upper] += 1
             entity_chunks[entity_title_upper].add(chunk_id)
 
-            # Generate BERT description only for NEW entities
             if entity_title_upper not in entities_accumulator:
-                context_chunk_id = chunk_id # Chunk where first encountered
+                context_chunk_id = chunk_id 
                 context_chunk_text = chunk_id_to_text_map.get(context_chunk_id, "")
                 first_original_mention = original_entity_text
                 bert_description = f"Entity representing '{entity_title_upper}'" 
@@ -508,9 +452,8 @@ def aggregate_and_finalize_graph(
 
                     if start_char_lower != -1:
                         start_char = start_char_lower
-                        end_char = start_char + len(first_original_mention) # Use original length
+                        end_char = start_char + len(first_original_mention) 
                         try:
-                            # Ensure get_bert_contextual_description is defined/imported
                             bert_description = get_bert_contextual_description(
                                 text=context_chunk_text,
                                 entity=first_original_mention,
@@ -532,7 +475,6 @@ def aggregate_and_finalize_graph(
                     logging.warning(f"Could not find chunk text for chunk_id {context_chunk_id} to generate description.")
                     bert_description = f"Contextual description unavailable for '{entity_title_upper}' (chunk text missing)"
 
-                # Create the new entity entry
                 entities_accumulator[entity_title_upper] = {
                     'id': str(uuid.uuid4()),
                     'title': entity_title_upper,
@@ -542,8 +484,6 @@ def aggregate_and_finalize_graph(
                     'frequency': 0,         
                     'degree': 0,            
                  }
-            # Else: Entity exists, description already generated/set
-
         # --- Create Relationship ---
         relationship = {
             'id': str(uuid.uuid4()),
@@ -552,50 +492,39 @@ def aggregate_and_finalize_graph(
             'description': rel_type,
             'type': rel_type,
             'weight': rel_weight,
-            'text_unit_ids': {chunk_id}, # Initialize with current chunk ID
-            'combined_degree': 0 # Will be populated later
+            'text_unit_ids': {chunk_id}, 
+            'combined_degree': 0 
         }
-
         normalized_relationships.append(relationship)
 
-
-    # --- Finalize Entities ---
+    # ---  Entities ---
     logging.info("Finalizing entity list...")
     final_entities_list = []
     for entity_title_upper, data in entities_accumulator.items():
         data['frequency'] = entity_frequency[entity_title_upper]
-        # Retrieve and assign the chunk IDs accumulated earlier
         data['text_unit_ids'] = list(entity_chunks[entity_title_upper])
         final_entities_list.append(data)
 
-    # --- Finalize Relationships ---
+    # ---  Relationships ---
     logging.info("Finalizing relationship list...")
-    # Convert text_unit_ids set to list for each relationship
     for rel in normalized_relationships:
         rel['text_unit_ids'] = list(rel['text_unit_ids'])
 
-    # --- Calculate Degrees ---
     logging.info("Calculating entity degrees...")
     entity_degrees = defaultdict(int)
-    if final_entities_list: # Check if list is not empty
+    if final_entities_list: 
         final_entity_titles = {e['title'] for e in final_entities_list}
         for rel in normalized_relationships:
-            # Check if source/target are in the final entity list before counting degree
             if rel['source'] in final_entity_titles:
                  entity_degrees[rel['source']] += 1
             if rel['target'] in final_entity_titles:
                  entity_degrees[rel['target']] += 1
 
-    # Assign degrees to entities
     for entity_data in final_entities_list:
         entity_data['degree'] = entity_degrees.get(entity_data['title'], 0)
 
-    # Assign combined degrees to relationships
     for rel in normalized_relationships:
         rel['combined_degree'] = entity_degrees.get(rel['source'], 0) + entity_degrees.get(rel['target'], 0)
-
-    # ---- Graph Filtering Steps Could Go Here (Optional) ----
-    #NOTE Graph filtering can be here 
 
     # --- Create DataFrames ---
     logging.info("Creating entities and relationships DataFrames...")
@@ -610,29 +539,21 @@ def aggregate_and_finalize_graph(
     relationships_df = pd.DataFrame(normalized_relationships)
     if not relationships_df.empty:
         relationships_df['human_readable_id'] = range(len(relationships_df))
-        # Ensure 'type' column consistency
         if 'type' not in relationships_df.columns:
              relationships_df['type'] = relationships_df['description']
     else:
         relationships_df = pd.DataFrame(columns=['id', 'human_readable_id', 'source', 'target', 'description', 'type', 'weight', 'combined_degree', 'text_unit_ids'])
 
-    # --- Create text_units_df ---
     logging.info("Creating text_units DataFrame...")
     text_units = []
-    # Ensure maps are created based on the potentially filtered lists if filtering is added
     entity_title_to_id_map = entities_df.set_index('title')['id'].to_dict() if not entities_df.empty else {}
 
-    # Map chunk IDs to relationship IDs that are present in the final dataframe
-    final_rel_ids_in_df = set(relationships_df['id']) if not relationships_df.empty else set()
     chunk_to_final_rel_ids = defaultdict(list)
-    # Rebuild this map based on the relationships *actually in the relationships_df*
     for _, rel_row in relationships_df.iterrows():
         rel_id = rel_row['id']
         for chunk_id in rel_row['text_unit_ids']:
              chunk_to_final_rel_ids[chunk_id].append(rel_id)
 
-    # Map entity titles (from final df) back to their original chunk IDs
-    # This needs to be rebuilt based on entities actually in the entities_df
     final_entity_chunks_in_df = defaultdict(set)
     for _, entity_row in entities_df.iterrows():
          title = entity_row['title']
@@ -642,10 +563,8 @@ def aggregate_and_finalize_graph(
 
     for chunk_info in chunk_processing_info:
         chunk_id = chunk_info['id']
-        # Find entities present in this chunk THAT ARE IN THE FINAL entities_df
         chunk_canonical_entities = {title for title, chunks in final_entity_chunks_in_df.items() if chunk_id in chunks}
         chunk_entity_ids = [entity_title_to_id_map[title] for title in chunk_canonical_entities if title in entity_title_to_id_map]
-        # Use the relationship mapping based on final relationships
         chunk_rel_ids = chunk_to_final_rel_ids.get(chunk_id, [])
 
         text_units.append({
@@ -656,7 +575,7 @@ def aggregate_and_finalize_graph(
             'document_ids': chunk_info['document_ids'],
             'entity_ids': chunk_entity_ids,
             'relationship_ids': chunk_rel_ids,
-            'covariate_ids': [] # Placeholder
+            'covariate_ids': [] 
         })
 
     text_units_df = pd.DataFrame(text_units)
@@ -667,18 +586,16 @@ def aggregate_and_finalize_graph(
     logging.info("Creating documents DataFrame...")
     all_final_text_unit_ids = list(text_units_df['id'])
     current_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S %z")
-    # Reconstruct full text - ensure 'texts' list is available or passed if needed
-    # For now, assuming chunk_processing_info contains all text segments correctly
     full_text = "".join([info['text'] for info in chunk_processing_info])
 
     documents_df = pd.DataFrame([{
         'id': document_id,
-        'human_readable_id': 1, # Assuming one document processed
+        'human_readable_id': 1, 
         'title': collection_name,
         'text': full_text,
         'text_unit_ids': all_final_text_unit_ids,
         'creation_date': current_timestamp,
-        'metadata': None # Placeholder
+        'metadata': None 
     }])
 
     # --- Save Parquet Files ---
@@ -691,7 +608,6 @@ def aggregate_and_finalize_graph(
     logging.info(f"Created {len(entities_df)} final entities.")
     logging.info(f"Created {len(relationships_df)} final relationships.")
     logging.info(f"Created {len(text_units_df)} text units.")
-
     return {
         'entities': entities_df,
         'relationships': relationships_df,
@@ -728,7 +644,6 @@ def process_text_to_graphrag(texts: List[str], output_dir: str) -> Dict[str, pd.
     except Exception as e:
         logging.error(f"Failed to load BERT models: {e}")
         raise
-
     logging.info("Loading REBEL models...")
     try:
         rebel_tokenizer = AutoTokenizer.from_pretrained("Babelscape/rebel-large")
@@ -743,18 +658,16 @@ def process_text_to_graphrag(texts: List[str], output_dir: str) -> Dict[str, pd.
     except Exception as e:
         logging.error(f"Failed to load NER pipeline: {e}")
         raise
-
     # --- Document Setup ---
     if not texts:
         logging.error("Input 'texts' list is empty. Cannot proceed.")
         return {}
     try:
-        # Ensure generate_deterministic_id is defined/imported
         document_id = generate_deterministic_id(texts[0])
     except NameError:
         logging.error("`generate_deterministic_id` function not found!")
         document_id = "fallback_doc_id_" + datetime.now().isoformat()
-    collection_name = os.getenv('COLLECTION_BASE_NAME', 'DefaultCollection') # Use default if not set
+    collection_name = os.getenv('COLLECTION_BASE_NAME', 'DefaultCollection') 
 
     # --- Pass 1: Raw Extraction ---
     logging.info("Starting Pass 1: Extracting raw triplets...")
@@ -768,12 +681,10 @@ def process_text_to_graphrag(texts: List[str], output_dir: str) -> Dict[str, pd.
 
         logging.info(f"Processing chunk {i+1}/{len(texts)}")
         try:
-            # Ensure generate_deterministic_id is defined/imported
             chunk_id = generate_deterministic_id(chunk_text)
         except NameError:
             logging.error("`generate_deterministic_id` function not found!")
             chunk_id = f"fallback_chunk_{i+1}_" + datetime.now().isoformat()
-
         chunk_processing_info.append({
             'id': chunk_id,
             'text': chunk_text,
@@ -782,7 +693,6 @@ def process_text_to_graphrag(texts: List[str], output_dir: str) -> Dict[str, pd.
         })
 
         try:
-            # Ensure split_into_sentences is defined/imported
             sentences = split_into_sentences(chunk_text)
         except NameError:
             logging.error("`split_into_sentences` function not found! Processing chunk as single sentence.")
@@ -792,7 +702,6 @@ def process_text_to_graphrag(texts: List[str], output_dir: str) -> Dict[str, pd.
             if not sentence or not sentence.strip(): continue
 
             try:
-                 # Ensure extract_raw_triplets_from_sentence is defined/imported
                 raw_sentence_triplets = extract_raw_triplets_from_sentence(
                     sentence_text=sentence,
                     rebel_model=rebel_model,
@@ -803,10 +712,9 @@ def process_text_to_graphrag(texts: List[str], output_dir: str) -> Dict[str, pd.
                 all_raw_triplets.extend(raw_sentence_triplets)
             except NameError:
                 logging.error("`extract_raw_triplets_from_sentence` function not found!")
-                break # Stop processing sentences for this chunk if extraction fails
+                break 
             except Exception as e:
                 logging.error(f"Error extracting triplets from sentence in chunk {i+1}: {e}")
-                # Decide whether to continue with next sentence or skip chunk
 
     logging.info(f"Pass 1 Complete: Extracted {len(all_raw_triplets)} raw triplets.")
 
@@ -814,18 +722,10 @@ def process_text_to_graphrag(texts: List[str], output_dir: str) -> Dict[str, pd.
     
     if not all_raw_triplets:
         logging.warning("No raw triplets were extracted after Pass 1. Cannot proceed.")
-        # Optionally save empty files or just return empty
-        # For now, return empty dict as per original logic
         return {}
-
-    # Create map for easy chunk text lookup (needed by aggregation function)
     chunk_id_to_text_map = {info['id']: info['text'] for info in chunk_processing_info}
-
-    # --- Call Aggregation and Finalization Function ---
     logging.info("Calling graph aggregation and finalization process...")
     try:
-        
-        # Ensure aggregate_and_finalize_graph is defined/imported
         final_graph_data = aggregate_and_finalize_graph(
             all_raw_triplets=all_raw_triplets,
             chunk_processing_info=chunk_processing_info,
@@ -843,10 +743,8 @@ def process_text_to_graphrag(texts: List[str], output_dir: str) -> Dict[str, pd.
         logging.error(f"Error during graph aggregation and finalization: {e}")
         return {} 
 
-
     end_time = datetime.now()
     logging.info(f"Full processing complete in {end_time - start_time}")
-
     return final_graph_data
 
 
@@ -864,35 +762,27 @@ def generate_community_reports(communities_df, entities_df, relationships_df, te
         community_id = community['id']
         entity_ids = community['entity_ids']
         relationship_ids = community['relationship_ids']
-        
-        # Get entity details - handle potential empty lists
         try:
             community_entities = entities_df[entities_df['id'].isin(entity_ids)]
         except:
-            community_entities = entities_df.iloc[0:0].copy()  # Empty DataFrame with same structure
+            community_entities = entities_df.iloc[0:0].copy()  
             
-        # Get relationship details - handle potential empty lists
         try:
             community_relationships = relationships_df[relationships_df['id'].isin(relationship_ids)]
         except:
             community_relationships = relationships_df.iloc[0:0].copy()  # Empty DataFrame
         
-        # Create context for summarization
         context_parts = []
         
-        # Add entity information
         context_parts.append("Entities in this community:")
         for _, entity in community_entities.iterrows():
             context_parts.append(f"- {entity['title']}: {entity['description']}")
         
-        # Add relationship information
         context_parts.append("\nRelationships in this community:")
         for _, rel in community_relationships.iterrows():
             context_parts.append(f"- {rel['source']} {rel['description']} {rel['target']}")
         
         context = "\n".join(context_parts)
-        
-        # Create a title based on the most central entities
         try:
             if len(community_entities) > 0 and 'degree' in community_entities.columns:
                 central_entities = community_entities.nlargest(min(3, len(community_entities)), 'degree')
@@ -906,13 +796,10 @@ def generate_community_reports(communities_df, entities_df, relationships_df, te
         except Exception as e:
             print(f"Error creating title for community {community['community']}: {e}")
             community_title = f"Community {community['community']}"
-        
-        # Generate summary with dynamic length handling
         try:
             input_length = len(context.split())
             
-            if input_length > 300:  # Only summarize if we have enough context
-                # Dynamic max_length calculation - approximately half the input length
+            if input_length > 300: 
                 max_output_length = min(150, max(50, input_length // 2))
                 min_output_length = max(20, max_output_length // 3)
                 
@@ -924,13 +811,9 @@ def generate_community_reports(communities_df, entities_df, relationships_df, te
                     truncation=True 
                 )[0]['summary_text']
             else:
-                # For short contexts, create a descriptive statement instead of summarizing
                 entity_count = len(community_entities)
                 rel_count = len(community_relationships)
-                
-                # Create descriptive summary without using value_counts
                 if entity_count > 0 and 'type' in community_entities.columns:
-                    # Safely get entity types
                     entity_types_list = community_entities['type'].tolist()
                     type_counts = {}
                     for t in entity_types_list:
@@ -938,28 +821,18 @@ def generate_community_reports(communities_df, entities_df, relationships_df, te
                             type_counts[t] += 1
                         else:
                             type_counts[t] = 1
-                    
-                    # Get top 3 types sorted by count
                     sorted_types = sorted(type_counts.items(), key=lambda x: x[1], reverse=True)[:3]
-                    
-                    # Create type description
                     main_types = [f"{count} {type_name}" for type_name, count in sorted_types]
                     type_description = ", ".join(main_types)
-                    
                     summary = f"This community contains {entity_count} entities ({type_description}) with {rel_count} relationships. The main entities include {community_title}."
                 else:
                     summary = f"This small community contains entities related to {community_title}."
         except Exception as e:
             print(f"Error summarizing community {community['community']}: {e}")
             summary = f"This community contains {len(entity_ids)} entities and {len(relationship_ids)} relationships."
-        
-        # Create findings
         findings = []
-        
-        # Find the most central entity - with error handling
         if len(community_entities) > 0 and 'degree' in community_entities.columns:
             try:
-                # Safely find highest degree
                 max_degree_idx = community_entities['degree'].idxmax()
                 central_entity = community_entities.loc[max_degree_idx]
                 findings.append({
@@ -967,11 +840,8 @@ def generate_community_reports(communities_df, entities_df, relationships_df, te
                 })
             except Exception as e:
                 print(f"Error finding central entity: {e}")
-        
-        # Find the strongest relationship
         if len(community_relationships) > 0 and 'weight' in community_relationships.columns:
             try:
-                # Safely find highest weight
                 max_weight_idx = community_relationships['weight'].idxmax()
                 strongest_rel = community_relationships.loc[max_weight_idx]
                 findings.append({
@@ -979,11 +849,8 @@ def generate_community_reports(communities_df, entities_df, relationships_df, te
                 })
             except Exception as e:
                 print(f"Error finding strongest relationship: {e}")
-            
-        # Find most common entity type
         if len(community_entities) > 0 and 'type' in community_entities.columns:
             try:
-                # Count types manually to avoid Series.__getitem__ warning
                 entity_types_list = community_entities['type'].tolist()
                 type_counts = {}
                 for t in entity_types_list:
@@ -993,7 +860,6 @@ def generate_community_reports(communities_df, entities_df, relationships_df, te
                         type_counts[t] = 1
                 
                 if type_counts:
-                    # Get most common type
                     most_common_type = max(type_counts.items(), key=lambda x: x[1])
                     findings.append({
                         'explanation': f"The most common entity type is {most_common_type[0]} with {most_common_type[1]} instances."
@@ -1001,7 +867,6 @@ def generate_community_reports(communities_df, entities_df, relationships_df, te
             except Exception as e:
                 print(f"Error finding most common entity type: {e}")
         
-        # Create full content with markdown formatting
         full_content = f"# {community_title}\n\n{summary}\n\n## Entities\n\n"
         for _, entity in community_entities.iterrows():
             entity_type = entity.get('type', 'Unknown')
@@ -1010,27 +875,22 @@ def generate_community_reports(communities_df, entities_df, relationships_df, te
         full_content += "\n## Key Relationships\n\n"
         for _, rel in community_relationships.head(10).iterrows():
             full_content += f"- {rel['source']} → {rel['description']} → {rel['target']}\n"
-        
-        # Calculate importance score based on entity degrees and relationship weights
         try:
             avg_entity_degree = community_entities['degree'].mean() if len(community_entities) > 0 and 'degree' in community_entities.columns else 0
             avg_relationship_weight = community_relationships['weight'].mean() if len(community_relationships) > 0 and 'weight' in community_relationships.columns else 0
             
             importance_score = (0.7 * min(10, avg_entity_degree / 2)) + (0.3 * min(10, avg_relationship_weight * 10))
-            importance_score = round(max(1, min(10, importance_score)), 1)  # Scale to 1-10
+            importance_score = round(max(1, min(10, importance_score)), 1) 
         except Exception as e:
             print(f"Error calculating importance score: {e}")
-            importance_score = 5.0  # Default score
+            importance_score = 5.0  
         
-        # Create full content in JSON format - safely
         try:
             full_content_json = {
                 "title": community_title,
                 "summary": summary,
                 "entities": []
             }
-            
-            # Add entities if available
             if len(community_entities) > 0:
                 full_content_json["entities"] = []
                 for _, entity in community_entities.iterrows():
@@ -1042,7 +902,6 @@ def generate_community_reports(communities_df, entities_df, relationships_df, te
                         entity_json["degree"] = int(entity['degree'])
                     full_content_json["entities"].append(entity_json)
             
-            # Add relationships if available
             if len(community_relationships) > 0:
                 full_content_json["relationships"] = []
                 for _, rel in community_relationships.iterrows():
@@ -1055,7 +914,6 @@ def generate_community_reports(communities_df, entities_df, relationships_df, te
                         rel_json["weight"] = float(rel['weight'])
                     full_content_json["relationships"].append(rel_json)
             
-            # Add findings
             full_content_json["findings"] = [finding['explanation'] for finding in findings]
             
             json_str = json.dumps(full_content_json, indent=1)
@@ -1063,7 +921,6 @@ def generate_community_reports(communities_df, entities_df, relationships_df, te
             print(f"Error creating JSON content: {e}")
             json_str = json.dumps({"title": community_title, "summary": summary})
         
-        # Create report entry
         community_reports.append({
             'id': community_id,
             'human_readable_id': len(community_reports),
@@ -1082,7 +939,6 @@ def generate_community_reports(communities_df, entities_df, relationships_df, te
             'size': community.get('size', len(entity_ids))
         })
     
-    # Update community titles in communities_df - safely
     try:
         community_title_map = {row['community']: row['title'] for row in community_reports}
         
@@ -1092,47 +948,27 @@ def generate_community_reports(communities_df, entities_df, relationships_df, te
     except Exception as e:
         print(f"Error updating community titles: {e}")
     
-    # Create community reports dataframe
     community_reports_df = pd.DataFrame(community_reports)
-    
-    # Save updated communities and reports
     communities_df.to_parquet(os.path.join(output_dir, 'communities.parquet'))
     community_reports_df.to_parquet(os.path.join(output_dir, 'community_reports.parquet'))
-    
     print(f"Generated {len(community_reports)} community reports")
     return community_reports_df
 
 
 def run_graph_analysis(results, entities_df, relationships_df, text_units_df, output_dir):
     """Run complete graph analysis workflow with fixed hierarchy and text connections"""
-    # Run community detection with proper text unit connections
     
-    # Extract the communities dataframe from the results dictionary
     communities_df = results['communities']
-    
-    # Generate community reports
     community_reports_df = generate_community_reports(communities_df, entities_df, relationships_df, text_units_df, output_dir)
-    
-    # Create node embeddings and positions
     print("Generating entity embeddings and positions...")
     try:
-        # Get the original graph from the results
-        G = results['original_graph']
-        
-        # Create entity text representations for embedding
         entity_texts = [f"{row['title']}: {row['description']}" for _, row in entities_df.iterrows()]
         entity_ids = entities_df['id'].tolist()
-        
-        # Generate embeddings
         embedding_model = SentenceTransformer(os.getenv('DENSE_MODEL_KEY'))
         embeddings = embedding_model.encode(entity_texts)
-        
-        # Generate 2D positions with PCA
         if len(embeddings) > 1:
             pca = PCA(n_components=2)
             positions_2d = pca.fit_transform(embeddings)
-            
-            # Update entity positions
             for i, entity_id in enumerate(entity_ids):
                 idx = entities_df[entities_df['id'] == entity_id].index
                 if len(idx) > 0:
@@ -1140,17 +976,13 @@ def run_graph_analysis(results, entities_df, relationships_df, text_units_df, ou
                     entities_df.at[idx[0], 'y'] = float(positions_2d[i][1])
     except Exception as e:
         print(f"Error generating embeddings: {e}")
-        # Set default coordinates if embedding fails
         for i in range(len(entities_df)):
             entities_df.at[i, 'x'] = float(i % 10)
             entities_df.at[i, 'y'] = float(i // 10)
     
-    # Save updated entities
     entities_df.to_parquet(os.path.join(output_dir, 'entities.parquet'))
-    
     print(f"Created {len(communities_df)} communities")
     print(f"Generated {len(community_reports_df)} community reports")
-    
     return {
         'communities': communities_df,
         'community_reports': community_reports_df,
@@ -1161,28 +993,17 @@ def run_graph_analysis(results, entities_df, relationships_df, text_units_df, ou
 def classical_model_run_graph_ingestion(driver, dataset_path):
     print(" starting classical ingestion to neo4j.....")
     dataset_text = create_texts_data(dataset_path)
-    
     results = process_text_to_graphrag(dataset_text, output_dir)
-        
     print("====== End of text process analysis =======")
-
     entities_df = pd.read_parquet(os.path.join(output_dir, 'entities.parquet'))
     relationships_df=pd.read_parquet(os.path.join(output_dir, 'relationships.parquet'))
-
-    # Run the community detection with visualization enabled
     results = detect_communities(entities_df, relationships_df, output_dir, visualize=True, graph_prefix='DL')
-
-    # Get the communities dataframe
     communities_df = results['communities']
-
-    # Save communities dataframe
     communities_df.to_parquet(os.path.join(output_dir, 'communities.parquet'))
-
     logging.info(f"Created {len(communities_df)} communities across 3 levels")
-    
     plot_original_graph(graph = results['original_graph'], save_path = image_path, prefix= 'DL', filename = "DL_original_graph.png")
 
-    # Plot each community graph separately
+    # Plot each community graph 
     plot_community_graph(graph = results['community_graphs']['level0'], 
                         communities = results['communities_L0'], 
                         level_name = "Level 0 (Broad)", 
@@ -1209,32 +1030,27 @@ def classical_model_run_graph_ingestion(driver, dataset_path):
     plot_hierarchical_communities(results=results, save_path = image_path, filename = "DL_hierarchical_community", figsize=(20, 7))
 
         
-        # Load previously generated data
+        # Load generated data
     entities_df = pd.read_parquet(os.path.join(output_dir, 'entities.parquet'))
     relationships_df = pd.read_parquet(os.path.join(output_dir, 'relationships.parquet'))
     text_units_df = pd.read_parquet(os.path.join(output_dir, 'text_units.parquet'))
     
     logging.info("================= Community Reports done ===========:")
-    
         # Run graph analysis
     results_g = run_graph_analysis(results, entities_df, relationships_df, text_units_df, output_dir)
-    
     logging.info("================= DL graph analysis done ===========:")
 
     if results_g:
         clear_graph(driver, graph_prefix="DL")
         list_graph_prefixes(driver)
-        # 5. call the import_graph_data function with your dataframes
         try:
-            # Load  dataframes
             entities_df = pd.read_parquet(os.path.join(output_dir, 'entities.parquet'))
             relationships_df = pd.read_parquet(os.path.join(output_dir, 'relationships.parquet')) 
             text_units_df = pd.read_parquet(os.path.join(output_dir, 'text_units.parquet')) 
             documents_df = pd.read_parquet(os.path.join(output_dir, 'documents.parquet')) 
             communities_df = pd.read_parquet(os.path.join(output_dir, 'communities.parquet')) 
             community_reports_df =  pd.read_parquet(os.path.join(output_dir, 'community_reports.parquet')) 
-
-            # Import LLM-generated graph
+            
             success = import_complete_graph_data(
                 driver,
                 entities_df, 
@@ -1253,11 +1069,9 @@ def classical_model_run_graph_ingestion(driver, dataset_path):
                 print("Import completed with some issues")
                 
         except Exception as e:
-            print(f"Error during import process: {e}") 
-            
+            print(f"Error during import process: {e}")   
     results['number_of_nodes'] = len(entities_df)
     results['number_of_relationships'] = len(relationships_df)
-        
     return results    
         
         

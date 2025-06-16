@@ -16,7 +16,7 @@ import tiktoken
 import logging
 import uuid
 import random 
-from typing import List, Set, Optional, Callable, Dict
+from typing import List, Optional, Callable
 
 load_dotenv(dotenv_path=os.path.join(os.getcwd(), '.env'), override=True)
 
@@ -39,7 +39,6 @@ def parse_response_to_json(response_text):
     json_match = re.search(json_pattern, response_text)
         
     if json_match:
-            # Extract JSON from code block
        json_str = json_match.group(1).strip()
        return json.loads(json_str)
    
@@ -75,7 +74,7 @@ def create_sampled_text_block(
 
     num_chunks = len(all_chunks)
     sampled_indices = list(range(num_chunks))
-    random.shuffle(sampled_indices) # Shuffle indices to sample randomly
+    random.shuffle(sampled_indices) 
 
     concatenated_text = ""
     current_tokens = 0
@@ -105,13 +104,11 @@ def create_sampled_text_block(
 
     return concatenated_text
 
-# --- Main Orchestration Function (Using Sampling) ---
-
 def generate_types_from_sampled_chunks(
     all_chunks: List[str],
     model: str = "gemini-2.0-flash", 
     temperature: float = 0.1,
-    sample_max_tokens: int = 120000, #since my text is about this size
+    sample_max_tokens: int = 120000, 
     token_counter_func: Callable[[str], int] = count_tokens, 
     max_retries: int = 2,
     retry_delay: int = 5
@@ -135,13 +132,10 @@ def generate_types_from_sampled_chunks(
         A final, potentially refined list of entity types.
     """
     logging.info("--- Starting Dynamic Entity Type Generation (via Sampling) ---")
-
-
     if not all_chunks:
         logging.error("Text splitting resulted in no chunks.")
         return []
 
-    # --- 2. Create the sampled text block ---
     sampled_text = create_sampled_text_block(
         all_chunks,
         sample_max_tokens,
@@ -151,7 +145,6 @@ def generate_types_from_sampled_chunks(
         logging.error("Failed to create a sampled text block.")
         return ["UNKNOWN"] 
 
-    # --- 3. Setup and Run Single Discovery Call on Sampled Text ---
     discovery_prompt_template = """
     Analyze the following text, which is a large sample concatenated from random parts of a bigger document.
     Your goal is to identify all relevant entity types or categories mentioned within THIS SAMPLE text.
@@ -200,8 +193,6 @@ def generate_types_from_sampled_chunks(
         logging.error("Failed to discover any types from the sampled text.")
         return []
 
-    # --- 4. Setup and Run Optional Refinement Call on the Discovered List ---
-    # Reuse the refinement logic from the previous example
     refinement_prompt_template = """
     You are provided with a list of potential entity types discovered from a SAMPLE of a larger document. Your task is to refine this list into a concise, consistent, and useful set of types suitable for knowledge graph extraction from the full document.
 
@@ -226,10 +217,7 @@ def generate_types_from_sampled_chunks(
     refinement_prompt = ChatPromptTemplate.from_template(refinement_prompt_template)
     refinement_llm = gemini_llm(model, temperature)
     refinement_chain = refinement_prompt | refinement_llm | StrOutputParser()
-
-    # Convert list to set for input to refinement function (which expects set)
     raw_types_set = set(raw_types_list)
-    
     refinement_chain.invoke
     response = refinement_chain.invoke({
             "type_list": raw_types_set,
@@ -299,22 +287,16 @@ def extract_raw_triplets_with_llm( text:str, chunk_id: str, entity_types:List[st
 
     for attempt in range(max_retries):
         try:
-            # Set up chain
             prompt = ChatPromptTemplate.from_template(prompt_template)
             llm = gemini_llm(model, temperature)
             chain = prompt | llm | StrOutputParser()
 
             logging.debug(f"Invoking LLM (Attempt {attempt+1}) for chunk {chunk_id[:10]}...")
             response = chain.invoke({"input_text": text, "allowed_types_str": entity_types })
-
-            #print("****** LLM Response \n",response, "\n ********************")
-            # Parse the structured response
             extraction_result = parse_response_to_json(response)
             if not extraction_result or ('entities' not in extraction_result and 'relationships' not in extraction_result):
                  logging.warning(f"LLM parsing failed or returned empty structure for chunk {chunk_id}. Response: {response[:200]}")
                  raise ValueError("Failed to parse valid JSON from LLM response") 
-
-            # Create a quick lookup for entity types
             entity_details_map = {
                 entity.get('title').strip(): {
                     'type': entity.get('type').strip().upper(),
@@ -322,10 +304,6 @@ def extract_raw_triplets_with_llm( text:str, chunk_id: str, entity_types:List[st
                  }
                 for entity in extraction_result.get('entities') if entity.get('title').strip()
             }
-                
-            # logging.debug(f"Entity types map: {entity_types_map}")
-
-            # Process relationships into the desired raw_triplet format
             for rel in extraction_result.get('relationships'):
                 source = rel.get('source').strip()
                 target = rel.get('target').strip()
@@ -333,12 +311,9 @@ def extract_raw_triplets_with_llm( text:str, chunk_id: str, entity_types:List[st
                 weight = float(rel.get('weight')) 
                 rel_description = rel.get('description').strip() 
 
-                # Basic validation
                 if not source or not target or not label or source == target:
                     logging.debug(f"Skipping invalid relationship: {rel}")
                     continue
-
-                # Lookup entity types
                 source_details = entity_details_map.get(source)
                 target_details = entity_details_map.get(target)
                 
@@ -347,7 +322,6 @@ def extract_raw_triplets_with_llm( text:str, chunk_id: str, entity_types:List[st
                 head_description = source_details['description'] 
                 tail_description = target_details['description'] 
 
-                # Add to list if source/target mentioned in entities list
                 if source in entity_details_map or target in entity_details_map:
                     raw_triplets_found.append({
                         'head': source,
@@ -363,18 +337,16 @@ def extract_raw_triplets_with_llm( text:str, chunk_id: str, entity_types:List[st
                     })
 
             logging.info(f"LLM extracted {len(raw_triplets_found)} raw triplets for chunk {chunk_id[:10]}...")
-            # Success
             return raw_triplets_found
 
         except Exception as e:
             logging.error(f"Error during LLM extraction (Attempt {attempt+1}/{max_retries}) for chunk {chunk_id}: {e}")
             if attempt < max_retries - 1:
                 time.sleep(retry_delay)
-                retry_delay *= 2 # Exponential backoff
+                retry_delay *= 2 
             else:
                 logging.error(f"LLM extraction failed permanently for chunk {chunk_id} after {max_retries} attempts.")
-                return [] # Return empty list on permanent failure
-
+                return []
     return []
 
 
@@ -402,35 +374,24 @@ def process_text_to_graphrag_with_llm(dataset_path,
     start_time = datetime.now() 
     logging.info(f"Starting GraphRAG processing pipeline for path: {dataset_path}")
 
-    # --- Load Texts ---
     texts = create_texts_data(dataset_path)
     if not texts:
         logging.error("Input 'texts' list is empty after loading. Cannot proceed.")
         return {}
     total_chunks = len(texts)
     print(f"there are {total_chunks} number of chunks for all the websites ")
-
-    # --- Document Setup ---
-    # Placed here as it depends on texts
     document_id = generate_deterministic_id(texts[0])
-    collection_name = os.getenv('COLLECTION_BASE_NAME', 'DefaultCollection') # Added default
-
-
-    # --- Pass 1: Raw Extraction using LLM ---
-    # (This part remains within the main function as per your snippet)
+    collection_name = os.getenv('COLLECTION_BASE_NAME', 'DefaultCollection')
     logging.info("Starting Pass 1: Extracting raw triplets using LLM...")
     all_raw_triplets = []
     chunk_processing_info = []
-
     allowed_entity_types = generate_types_from_sampled_chunks(all_chunks = texts, max_retries = 5)
-    
     for i, chunk_text in enumerate(texts):
         current_chunk_num = i + 1
         if not chunk_text or not chunk_text.strip():
             logging.warning(f"Skipping empty chunk {i+1}/{len(texts)}")
             continue
-
-        # logging.info(f"Processing chunk {i+1}/{len(texts)}") # Can be verbose
+        
         chunk_id = generate_deterministic_id(chunk_text)
         chunk_processing_info.append({
             'id': chunk_id,
@@ -439,7 +400,6 @@ def process_text_to_graphrag_with_llm(dataset_path,
             'document_ids': [document_id]
         })
         logging.info(f"Processing chunk {current_chunk_num}/{total_chunks} for LLM extraction...")
-
         try:
             raw_chunk_triplets = extract_raw_triplets_with_llm(
                 text=chunk_text,
@@ -448,8 +408,8 @@ def process_text_to_graphrag_with_llm(dataset_path,
                 model=model,
                 temperature=temperature
             )
-            #with open(os.path.join(os.getcwd(), 'src/ingestion_pipeline/graph_llm_ingestion/triplets.json'), 'w', encoding='utf-8') as f:
-             #   json.dump(raw_chunk_triplets, f, indent=4, ensure_ascii=False)
+            with open(os.path.join(os.getcwd(), 'src/ingestion_pipeline/graph_llm_ingestion/triplets.json'), 'w', encoding='utf-8') as f:
+             json.dump(raw_chunk_triplets, f, indent=4, ensure_ascii=False)
                 
             all_raw_triplets.extend(raw_chunk_triplets)
         except Exception as e:
@@ -467,18 +427,12 @@ def process_text_to_graphrag_with_llm(dataset_path,
     if not all_raw_triplets:
         logging.warning("No raw triplets were extracted by the LLM. Check LLM responses or prompts.")
         return {}
-
-
-    # --- Pass 2: Basic Normalization and Aggregation ---
+    
     logging.info("Starting Pass 2: Basic Normalization and Aggregation...")
-
-    # Step 2.2: Initialize Final Data Structures
     entities_accumulator = {}
     normalized_relationships = []
     entity_frequency = defaultdict(int)
     entity_chunks = defaultdict(set)
-
-    # Step 2.3: Iterate Through Raw Triplets for Aggregation
     logging.info("Aggregating entities and relationships...")
     num_skipped_empty = 0
     num_skipped_self_loops = 0
@@ -486,8 +440,6 @@ def process_text_to_graphrag_with_llm(dataset_path,
         original_head = raw_triplet.get('head')
         original_tail = raw_triplet.get('tail')
         chunk_id = raw_triplet.get('chunk_id')
-
-        # Basic normalization: Strip whitespace and convert to uppercase
         norm_head = str(original_head).strip() if original_head else ""
         norm_tail = str(original_tail).strip() if original_tail else ""
 
@@ -497,17 +449,13 @@ def process_text_to_graphrag_with_llm(dataset_path,
 
         norm_head_upper = norm_head.upper()
         norm_tail_upper = norm_tail.upper()
-
-        # Skip self-loops AFTER basic normalization
         if norm_head_upper == norm_tail_upper:
              num_skipped_self_loops += 1
              continue
 
         rel_type = raw_triplet.get('type', 'related to')
         rel_description = raw_triplet.get('description', '')
-        if not rel_description: rel_description = f"{norm_head} {rel_type} {norm_tail}" # Use non-upper case for description
-
-
+        if not rel_description: rel_description = f"{norm_head} {rel_type} {norm_tail}"
         for norm_entity_upper, _, entity_type_hint, entity_description_hint in [
                     (norm_head_upper, original_head, raw_triplet.get('head_type', 'UNKNOWN'), raw_triplet.get('head_description', '')),
                     (norm_tail_upper, original_tail, raw_triplet.get('tail_type', 'UNKNOWN'), raw_triplet.get('tail_description', ''))]:
@@ -517,10 +465,10 @@ def process_text_to_graphrag_with_llm(dataset_path,
 
             if norm_entity_upper not in entities_accumulator:
                 first_description = entity_description_hint if entity_description_hint else f"Entity: {norm_entity_upper}"
-                first_type = entity_type_hint if entity_type_hint != 'UNKNOWN' else 'ENTITY' # Use hint or default
+                first_type = entity_type_hint if entity_type_hint != 'UNKNOWN' else 'ENTITY' 
                 entities_accumulator[norm_entity_upper] = {
                     'id': str(uuid.uuid4()),
-                    'title': norm_entity_upper, # Store normalized upper case
+                    'title': norm_entity_upper, 
                     'type': first_type,
                     'description': first_description,
                     'text_unit_ids': set(), 
@@ -538,13 +486,8 @@ def process_text_to_graphrag_with_llm(dataset_path,
             'text_unit_ids': {chunk_id}, 
             'combined_degree': 0 
         })
-    # Log skipped counts
     if num_skipped_empty > 0: logging.info(f"Skipped {num_skipped_empty} triplets due to empty head/tail after basic normalization.")
     if num_skipped_self_loops > 0: logging.info(f"Skipped {num_skipped_self_loops} self-loops after basic normalization.")
-
-
-    # --- Step 3: Call the Saving/Finalization Helper Function ---
-    # Pass all the accumulated data to the helper
     final_dataframes = save_llm_graph_data(
         entities_accumulator=entities_accumulator,
         entity_frequency=entity_frequency,
@@ -553,16 +496,14 @@ def process_text_to_graphrag_with_llm(dataset_path,
         chunk_processing_info=chunk_processing_info,
         document_id=document_id,
         collection_name=collection_name,
-        texts=texts, # Pass original texts for document concatenation
+        texts=texts, 
         output_dir=output_dir,
-        start_time=start_time # Pass original start time
+        start_time=start_time 
     )
 
     if not final_dataframes:
         logging.error("Saving/Finalization step failed.")
-        return {} # Return empty dict on failure
-
-    # Return the final result
+        return {} 
     return final_dataframes
 
 
@@ -589,40 +530,30 @@ def save_llm_graph_data(entities_accumulator, entity_frequency, entity_chunks,
         dict: Dictionary containing the final pandas DataFrames.
               Returns an empty dict or None on failure.
     """
-    # --- Finalization Steps (Copied directly from original) ---
     logging.info("Finalizing entity list...")
     final_entities_list = []
-    # Check if entities_accumulator has items before iterating
     if entities_accumulator:
         for norm_entity_upper, data in entities_accumulator.items():
-            # Ensure necessary keys exist before assignment
             data['frequency'] = entity_frequency.get(norm_entity_upper, 0)
             data['text_unit_ids'] = list(entity_chunks.get(norm_entity_upper, set()))
-            if 'degree' not in data: data['degree'] = 0 # Ensure degree exists
+            if 'degree' not in data: data['degree'] = 0 
             final_entities_list.append(data)
     else:
         logging.warning("entities_accumulator is empty. No entities to finalize.")
 
-
     logging.info("Finalizing relationship list...")
-    # Check if normalized_relationships has items before iterating
     if normalized_relationships:
         for rel in normalized_relationships:
-            # Ensure necessary keys exist before assignment
             rel['text_unit_ids'] = list(rel.get('text_unit_ids', set()))
-            if 'combined_degree' not in rel: rel['combined_degree'] = 0 # Ensure combined_degree exists
+            if 'combined_degree' not in rel: rel['combined_degree'] = 0 
     else:
         logging.warning("normalized_relationships list is empty. No relationships to finalize.")
-
-
     logging.info("Calculating entity degrees...")
     entity_degrees = defaultdict(int)
-    if final_entities_list: # Check if there are any entities
-        # Create set of titles only if list is not empty
+    if final_entities_list: 
         final_entity_titles = {e['title'] for e in final_entities_list if 'title' in e}
-        if normalized_relationships: # Check if there are relationships
+        if normalized_relationships: 
             for rel in normalized_relationships:
-                # Check if source/target exist before accessing
                 source = rel.get('source')
                 target = rel.get('target')
                 if source in final_entity_titles:
@@ -633,29 +564,20 @@ def save_llm_graph_data(entities_accumulator, entity_frequency, entity_chunks,
             logging.warning("No relationships found to calculate degrees from.")
     else:
         logging.warning("No finalized entities found to calculate degrees for.")
-
-
-    # Assign calculated degrees back to entities
     if final_entities_list:
         for entity_data in final_entities_list:
             entity_data['degree'] = entity_degrees.get(entity_data.get('title'), 0)
-
-    # Assign combined degrees to relationships
     if normalized_relationships:
         for rel in normalized_relationships:
              rel['combined_degree'] = entity_degrees.get(rel.get('source'), 0) + entity_degrees.get(rel.get('target'), 0)
 
-
-    # --- DataFrame Creation (Copied directly from original) ---
     logging.info("Creating entities and relationships DataFrames...")
     entities_df = pd.DataFrame(final_entities_list)
     if not entities_df.empty:
         entities_df['human_readable_id'] = range(len(entities_df))
-        # Ensure 'x' and 'y' columns exist, add if not
         if 'x' not in entities_df.columns: entities_df['x'] = 0.0
         if 'y' not in entities_df.columns: entities_df['y'] = 0.0
     else:
-        # Define columns explicitly for empty DataFrame
         entities_df = pd.DataFrame(columns=['id', 'title', 'type', 'description', 'text_unit_ids', 'frequency', 'degree', 'human_readable_id', 'x', 'y'])
 
     relationships_df = pd.DataFrame(normalized_relationships)
@@ -667,39 +589,31 @@ def save_llm_graph_data(entities_accumulator, entity_frequency, entity_chunks,
     logging.info("Creating text_units DataFrame...")
     text_units = []
     entity_title_to_id_map = entities_df.set_index('title')['id'].to_dict() if not entities_df.empty and 'title' in entities_df.columns else {}
-
-    # Map relationships back to chunks efficiently
     chunk_to_rel_ids = defaultdict(list)
     if normalized_relationships:
         for rel in normalized_relationships:
             rel_id = rel.get('id')
             rel_chunk_ids = rel.get('text_unit_ids', [])
-            # Assuming text_unit_ids list for relationship has the single chunk_id
             if rel_chunk_ids and rel_id:
-                 chunk_id_for_rel = rel_chunk_ids[0] # Get the chunk ID
+                 chunk_id_for_rel = rel_chunk_ids[0] 
                  chunk_to_rel_ids[chunk_id_for_rel].append(rel_id)
 
     if chunk_processing_info:
         for chunk_info in chunk_processing_info:
             chunk_id = chunk_info.get('id')
-            if not chunk_id: continue # Skip if chunk has no ID
-
-            # Find entity titles linked to this chunk
+            if not chunk_id: continue 
             chunk_canonical_entities = {title for title, chunks in entity_chunks.items() if chunk_id in chunks}
-            # Map canonical entity titles to their final IDs
             chunk_entity_ids = [entity_title_to_id_map[title] for title in chunk_canonical_entities if title in entity_title_to_id_map]
-            # Get relationship IDs linked to this chunk
             chunk_rel_ids = chunk_to_rel_ids.get(chunk_id, [])
-
             text_units.append({
                 'id': chunk_id,
                 'human_readable_id': chunk_info.get('human_readable_id', -1),
                 'text': chunk_info.get('text', ''),
-                'n_tokens': len(chunk_info.get('text', '').split()), # Simple token count
+                'n_tokens': len(chunk_info.get('text', '').split()), 
                 'document_ids': chunk_info.get('document_ids', []),
                 'entity_ids': chunk_entity_ids,
                 'relationship_ids': chunk_rel_ids,
-                'covariate_ids': [] # Placeholder
+                'covariate_ids': [] 
             })
     else:
         logging.warning("chunk_processing_info is empty. Cannot create text units.")
@@ -714,16 +628,14 @@ def save_llm_graph_data(entities_accumulator, entity_frequency, entity_chunks,
 
     documents_df = pd.DataFrame([{
         'id': document_id,
-        'human_readable_id': 1, #  single document processing
+        'human_readable_id': 1,
         'title': collection_name,
-        'text': "".join(texts) if texts else "", # Concatenate original texts safely
+        'text': "".join(texts) if texts else "", 
         'text_unit_ids': all_final_text_unit_ids,
         'creation_date': current_timestamp,
-        'metadata': None # Placeholder
+        'metadata': None 
     }])
-
-    # --- Saving Logic (Copied directly from original) ---
-    os.makedirs(output_dir, exist_ok=True) # Ensure output directory exists
+    os.makedirs(output_dir, exist_ok=True)
     logging.info(f"Saving parquet files to {output_dir}...")
     try:
         entities_df.to_parquet(os.path.join(output_dir, 'entities.parquet'), index=False)
@@ -732,15 +644,13 @@ def save_llm_graph_data(entities_accumulator, entity_frequency, entity_chunks,
         documents_df.to_parquet(os.path.join(output_dir, 'documents.parquet'), index=False)
     except Exception as e:
          logging.error(f"Failed to save parquet files to {output_dir}: {e}", exc_info=True)
-         return None # Indicate failure
+         return None 
 
     end_time = datetime.now()
     logging.info(f"Aggregation and saving complete. Total time from start: {end_time - start_time}")
     logging.info(f"Created {len(entities_df)} final entities.")
     logging.info(f"Created {len(relationships_df)} final relationships.")
     logging.info(f"Created {len(text_units_df)} text units.")
-
-    # Return the final dataframes
     return {
         'entities': entities_df,
         'relationships': relationships_df,
@@ -748,37 +658,25 @@ def save_llm_graph_data(entities_accumulator, entity_frequency, entity_chunks,
         'documents': documents_df
     }
     
-
 def generate_community_reports(communities_df, entities_df, relationships_df, output_dir, model = "gemini-2.0-flash", temperature=0.7):
     """Generate summarized reports for each community with dynamic length handling"""
     print("Generating community reports...")
-    
-    
-    community_reports = []
-    
-    # Setup the LLM chain
+    community_reports = []    
     llm = gemini_llm(model, temperature)
-    
-    # Process each community
     for idx, community in communities_df.iterrows():
         print(f"Processing community {idx+1}/{len(communities_df)}")
         community_id = community['id']
         entity_ids = community['entity_ids']
-        relationship_ids = community['relationship_ids']
-        
-        # Get entity details - handle potential empty lists
+        relationship_ids = community['relationship_ids']        
         try:
             community_entities = entities_df[entities_df['id'].isin(entity_ids)]
         except:
-            community_entities = entities_df.iloc[0:0].copy()  # Empty DataFrame with same structure
-            
-        # Get relationship details - handle potential empty lists
+            community_entities = entities_df.iloc[0:0].copy()  
         try:
             community_relationships = relationships_df[relationships_df['id'].isin(relationship_ids)]
         except:
-            community_relationships = relationships_df.iloc[0:0].copy()  # Empty DataFrame
-        
-        # Create context for LLM
+            community_relationships = relationships_df.iloc[0:0].copy() 
+
         entity_context = []
         for _, entity in community_entities.iterrows():
             entity_type = entity.get('type', 'Unknown')
@@ -797,17 +695,12 @@ def generate_community_reports(communities_df, entities_df, relationships_df, ou
                 "type": rel.get('type', ''),
                 "description": rel.get('description', ''),
                 "weight": float(rel.get('weight', 1.0))
-            })
-        
-        # Format the context for the prompt
+            })        
         entity_text = "\n".join([f"- {e['title']} ({e['type']}): {e['description']}" for e in entity_context[:20]])
         relationship_text = "\n".join([f"- {r['source']} → {r['target']}: {r['description']} (Weight: {r['weight']})" 
                                     for r in relationship_context[:20]])
-        
-        # Build the prompt for the LLM
         community_analysis_prompt = """
         You are an expert analyst tasked with summarizing and analyzing in details a community of related entities.
-        
         Please analyze the following community of entities and their relationships:
         
         ENTITIES:
@@ -837,27 +730,19 @@ def generate_community_reports(communities_df, entities_df, relationships_df, ou
           "rating_explanation": "Explanation for the rating"
         }}
         ```
-        """
-        
-        # Set up the chain
+        """        
         prompt = ChatPromptTemplate.from_template(community_analysis_prompt)
-
         chain = prompt | llm | StrOutputParser()
-        
-        # Process with retry logic
         max_retries = 5
         for attempt in range(max_retries):
             try:
-                # Get LLM response
                 response = chain.invoke({"entity_text": entity_text, "relationship_text": relationship_text})
-                analysis = parse_response_to_json(response) # Extract the JSON
-                #print("********* LLM response *************** \n", response)
+                analysis = parse_response_to_json(response) 
                 break
             except Exception as e:
                 print(f"Attempt {attempt+1} failed: {e}")
                 if attempt == max_retries - 1:
                     print(f"All attempts failed for community {community_id}. Using fallback.")
-                    # Fallback analysis
                     analysis = {
                         "title": f"Community {community['community']}",
                         "summary": f"This community contains {len(entity_ids)} entities and {len(relationship_ids)} relationships.",
@@ -870,19 +755,13 @@ def generate_community_reports(communities_df, entities_df, relationships_df, ou
                         "rating_explanation": "Medium importance based on limited analysis"
                     }
                 else:
-                    time.sleep(5)  # Wait before retrying
-        
-        # Get the values from the analysis
+                    time.sleep(5)  
         community_title = analysis.get("title", f"Community {community['community']}")
         summary = analysis.get("summary", f"Community with {len(entity_ids)} entities.")
         findings_list = analysis.get("findings", [])
         importance_score = float(analysis.get("importance_rating", 5.0))
         rating_explanation = analysis.get("rating_explanation", "Rating based on entity and relationship analysis.")
-        
-        # Format findings for storage
         findings = [{"explanation": finding} for finding in findings_list]
-        
-        # Create full content with markdown formatting
         full_content = f"# {community_title}\n\n{summary}\n\n## Entities\n\n"
         for _, entity in community_entities.iterrows():
             entity_type = entity.get('type', 'Unknown')
@@ -892,16 +771,12 @@ def generate_community_reports(communities_df, entities_df, relationships_df, ou
         for _, rel in community_relationships.head(10).iterrows():
             description = rel.get('description', 'related to')
             full_content += f"- {rel['source']} → {description} → {rel['target']}\n"
-        
-        # Create full content in JSON format
         try:
             full_content_json = {
                 "title": community_title,
                 "summary": summary,
                 "entities": []
             }
-            
-            # Add entities if available
             if len(community_entities) > 0:
                 full_content_json["entities"] = []
                 for _, entity in community_entities.iterrows():
@@ -911,17 +786,12 @@ def generate_community_reports(communities_df, entities_df, relationships_df, ou
                     }
                     if 'degree' in entity:
                         entity_json["degree"] = int(entity['degree'])
-                    full_content_json["entities"].append(entity_json)
-            
-            # Add findings
+                    full_content_json["entities"].append(entity_json)  
             full_content_json["findings"] = findings_list
-            
             json_str = json.dumps(full_content_json, indent=1)
         except Exception as e:
             print(f"Error creating JSON content: {e}")
             json_str = json.dumps({"title": community_title, "summary": summary})
-        
-        # Create report entry
         community_reports.append({
             'id': community_id,
             'human_readable_id': len(community_reports),
@@ -939,12 +809,8 @@ def generate_community_reports(communities_df, entities_df, relationships_df, ou
             'period': datetime.now().strftime('%Y-%m-%d'),
             'size': community.get('size', len(entity_ids))
         })
-        
-        # Add a small delay to avoid rate limiting
         if idx < len(communities_df) - 1:
             time.sleep(0.5)
-    
-    # Update community titles in communities_df
     try:
         community_title_map = {report['community']: report['title'] for report in community_reports}
         
@@ -953,46 +819,27 @@ def generate_community_reports(communities_df, entities_df, relationships_df, ou
                 communities_df.at[i, 'title'] = community_title_map[row['community']]
     except Exception as e:
         print(f"Error updating community titles: {e}")
-    
-    # Create community reports dataframe
     community_reports_df = pd.DataFrame(community_reports)
-    
-    # Save updated communities and reports
     communities_df.to_parquet(os.path.join(output_dir, 'communities.parquet'))
     community_reports_df.to_parquet(os.path.join(output_dir, 'community_reports.parquet'))
-    
     print(f"Generated {len(community_reports)} community reports")
     return community_reports_df   
    
    
-   
 def run_graph_analysis(results, entities_df, relationships_df, text_units_df, output_dir):
     """Run complete graph analysis workflow with fixed hierarchy and text connections"""
-    
-    # Extract the communities dataframe from the results dictionary
+
     communities_df = results['communities']
-    
-    # Generate community reports
     community_reports_df = generate_community_reports(communities_df, entities_df, relationships_df, output_dir)
-    
-    # Create node embeddings and positions
     print("Generating entity embeddings and positions...")
     try:
-        
-        # Create entity text representations for embedding
         entity_texts = [f"{row['title']}: {row['description']}" for _, row in entities_df.iterrows()]
         entity_ids = entities_df['id'].tolist()
-        
-        # Generate embeddings
         embedding_model = SentenceTransformer(os.getenv('DENSE_MODEL_KEY'))
         embeddings = embedding_model.encode(entity_texts)
-        
-        # Generate 2D positions with PCA
         if len(embeddings) > 1:
             pca = PCA(n_components=2)
             positions_2d = pca.fit_transform(embeddings)
-            
-            # Update entity positions
             for i, entity_id in enumerate(entity_ids):
                 idx = entities_df[entities_df['id'] == entity_id].index
                 if len(idx) > 0:
@@ -1000,17 +847,13 @@ def run_graph_analysis(results, entities_df, relationships_df, text_units_df, ou
                     entities_df.at[idx[0], 'y'] = float(positions_2d[i][1])
     except Exception as e:
         print(f"Error generating embeddings: {e}")
-        # Set default coordinates if embedding fails
         for i in range(len(entities_df)):
             entities_df.at[i, 'x'] = float(i % 10)
             entities_df.at[i, 'y'] = float(i // 10)
-    
-    # Save updated entities
+
     entities_df.to_parquet(os.path.join(output_dir, 'entities.parquet'))
-    
     print(f"Created {len(communities_df)} communities")
     print(f"Generated {len(community_reports_df)} community reports")
-    
     return {
         'communities': communities_df,
         'community_reports': community_reports_df,
@@ -1018,33 +861,19 @@ def run_graph_analysis(results, entities_df, relationships_df, text_units_df, ou
     }
 
 
-
 def llm_model_run_graph_ingestion(driver, dataset_path):
 
     output_dir = os.path.join(os.getcwd(), 'src/ingestion_pipeline/graph_llm_ingestion/rag_files')
     image_path = os.path.join(os.getcwd(), 'src/ingestion_pipeline/graph_llm_ingestion/llm_graph_images')
-
     results = process_text_to_graphrag_with_llm(dataset_path=dataset_path, output_dir= output_dir)
-     
     entities_df = pd.read_parquet(os.path.join(output_dir, 'entities.parquet'))
     relationships_df = pd.read_parquet(os.path.join(output_dir, 'relationships.parquet'))
     text_units_df = pd.read_parquet(os.path.join(output_dir, 'text_units.parquet'))
-    
-    # Run the community detection with visualization enabled
     results = detect_communities(entities_df, relationships_df, output_dir, visualize=True, graph_prefix='LLM')
-
-    # Get the communities dataframe
     communities_df = results['communities']
-
-    # Save communities dataframe
     communities_df.to_parquet(os.path.join(output_dir, 'communities.parquet'))
-
     print(f"Created {len(communities_df)} communities across 3 levels")
-    
-    # Plot the original graph
     plot_original_graph(graph = results['original_graph'], save_path = image_path, prefix='LLM', filename = "llm_original_graph.png")
-
-    # Plot each community graph separately
     plot_community_graph(graph = results['community_graphs']['level0'], 
                         communities = results['communities_L0'], 
                         level_name = "Level 0 (Broad)", 
@@ -1066,23 +895,18 @@ def llm_model_run_graph_ingestion(driver, dataset_path):
                         filename_prefix="llm_community_graph",
                         figsize=(14, 8))
 
-    # Plot hierarchical view (all levels side by side)
     plot_hierarchical_communities(results=results, save_path = image_path, figsize=(20, 7))
         
-    # Load previously generated data
     entities_df = pd.read_parquet(os.path.join(output_dir, 'entities.parquet'))
     relationships_df = pd.read_parquet(os.path.join(output_dir, 'relationships.parquet'))
     text_units_df = pd.read_parquet(os.path.join(output_dir, 'text_units.parquet'))
     
-    # Run graph analysis
     results_g = run_graph_analysis(results, entities_df, relationships_df, text_units_df, output_dir)
 
     if results_g:
         clear_graph(driver, graph_prefix="LLM")
         list_graph_prefixes(driver)
-        # 5. call the import_graph_data function with your dataframes
         try:
-            # Load  dataframes
             entities_df = pd.read_parquet(os.path.join(output_dir, 'entities.parquet'))
             relationships_df = pd.read_parquet(os.path.join(output_dir, 'relationships.parquet')) 
             text_units_df = pd.read_parquet(os.path.join(output_dir, 'text_units.parquet')) 
@@ -1090,7 +914,6 @@ def llm_model_run_graph_ingestion(driver, dataset_path):
             communities_df = pd.read_parquet(os.path.join(output_dir, 'communities.parquet')) 
             community_reports_df =  pd.read_parquet(os.path.join(output_dir, 'community_reports.parquet')) 
 
-            # Import LLM-generated graph
             success = import_complete_graph_data(
                 driver,
                 entities_df, 
@@ -1109,11 +932,9 @@ def llm_model_run_graph_ingestion(driver, dataset_path):
                 print("Import completed with some issues")
                 
         except Exception as e:
-            print(f"Error during import process: {e}") 
-            
+            print(f"Error during import process: {e}")        
     results['number_of_nodes'] = len(entities_df)
-    results['number_of_relationships'] = len(relationships_df)
-        
+    results['number_of_relationships'] = len(relationships_df)  
     return results         
     
     

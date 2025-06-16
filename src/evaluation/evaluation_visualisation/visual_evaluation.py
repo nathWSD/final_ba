@@ -50,41 +50,38 @@ def load_json_to_mysql(json_path, shared_start_time):
         # --- Step 2: Ensure the target database exists ---
         with conn.cursor() as cursor:
             print(f"Ensuring database '{MYSQL_DATABASE}' exists...")
-            # Use backticks `` for safety around database name
             cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{MYSQL_DATABASE}`")
             print(f"Database '{MYSQL_DATABASE}' check/creation complete.")
-            # Select the database for the rest of the session
             cursor.execute(f"USE `{MYSQL_DATABASE}`")
             print(f"Using database '{MYSQL_DATABASE}'.")
 
         # --- Step 3: Proceed with table creation and data insertion ---
-        with conn.cursor() as cursor: # Use the same connection
-            # Create table if it doesn't exist
+        with conn.cursor() as cursor:
             create_table_sql = f"""
             CREATE TABLE IF NOT EXISTS `{table_name}` (
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
-                `search_type` VARCHAR(150),                     -- Increased length slightly
+                `search_type` VARCHAR(150),                    
                 `precision` FLOAT,
                 `recall` FLOAT,
                 `relevancy` FLOAT,
-                `rouge1` FLOAT,                                 -- New metric
-                `cosine_similarity` FLOAT,                      -- New metric
+                `rouge1` FLOAT,                                
+                `cosine_similarity` FLOAT,                     
                 `num_input_token` INT,
                 `num_output_token` INT,
                 `time_taken` FLOAT,
-                `query` MEDIUMTEXT,                                   -- New text field
-                `actual_output` MEDIUMTEXT,                           -- New text field
-                `expected_output` MEDIUMTEXT,                         -- New text field
+                `query` MEDIUMTEXT,                                   
+                `actual_output` MEDIUMTEXT,                           
+                `expected_output` MEDIUMTEXT,                         
                 `retrieval_context` MEDIUMTEXT,               
-                `primary_llm_used` VARCHAR(100),                -- New model info
-                `fallback_llm_attempted` VARCHAR(100) NULL,     -- New fallback info (allow NULL)
-                `fallback_used_and_succeeded_relevancy` BOOLEAN, -- New flag
-                `fallback_used_and_succeeded_precision` BOOLEAN, -- New flag
-                `fallback_used_and_succeeded_recall` BOOLEAN,    -- New flag
-                `final_state_failed_relevancy` BOOLEAN,          -- New flag
-                `final_state_failed_precision` BOOLEAN,          -- New flag
-                `final_state_failed_recall` BOOLEAN,             -- New flag
-                `created_at` TIMESTAMP NULL                     -- Original timestamp
+                `primary_llm_used` VARCHAR(100),                
+                `fallback_llm_attempted` VARCHAR(100) NULL,     
+                `fallback_used_and_succeeded_relevancy` BOOLEAN,
+                `fallback_used_and_succeeded_precision` BOOLEAN, 
+                `fallback_used_and_succeeded_recall` BOOLEAN,    
+                `final_state_failed_relevancy` BOOLEAN,          
+                `final_state_failed_precision` BOOLEAN,          
+                `final_state_failed_recall` BOOLEAN,            
+                `created_at` TIMESTAMP NULL                     
             ) ENGINE=InnoDB CHARACTER SET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             """
             print(f"Executing: CREATE TABLE IF NOT EXISTS `{table_name}`...")
@@ -143,36 +140,30 @@ def load_json_to_mysql(json_path, shared_start_time):
                     current_timestamp.strftime('%Y-%m-%d %H:%M:%S') 
                 ))
 
-            # Insert data if any
             if rows_to_insert:
                 print(f"Inserting {len(rows_to_insert)} rows into `{table_name}`...")
                 rowcount = cursor.executemany(insert_sql, rows_to_insert)
-                conn.commit() # Commit the transaction
+                conn.commit() 
                 print(f"{rowcount} rows inserted successfully.")
             else:
                 print("No data found in JSON to insert.")
 
-        # --- Step 4: Close connection ---
         conn.close()
         print(f"PyMySQL connection closed for {table_name}.")
         return True
 
-    # --- Error Handling ---
     except pymysql.Error as err:
         error_code = err.args[0] if err.args else 'N/A'
         print(f"PyMySQL Error (Code: {error_code}): {err}")
         if error_code == 1044: print(f"Hint: User '{MYSQL_USER}' might lack permissions (e.g., CREATE DATABASE or privileges on '{MYSQL_DATABASE}').")
         elif error_code == 1045: print("Hint: Check MySQL username/password.")
-        # 1049 shouldn't happen here anymore due to CREATE DATABASE IF NOT EXISTS
         elif error_code == 2003: print(f"Hint: Ensure MySQL server is running and accessible on {MYSQL_HOST}:{MYSQL_PORT}.")
-        # Handle other potential errors during CREATE/INSERT
         elif error_code == 1146: print(f"Hint: Table '{table_name}' might not have been created successfully.")
 
-        if conn: conn.close() # Ensure connection is closed on error
+        if conn: conn.close() 
         return False
     except FileNotFoundError:
         print(f"Error: JSON file not found at '{json_path}'")
-        # No connection to close here usually
         return False
     except json.JSONDecodeError:
         print(f"Error: Could not decode JSON from file '{json_path}'.")
@@ -180,7 +171,7 @@ def load_json_to_mysql(json_path, shared_start_time):
         return False
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        traceback.print_exc() # Print full traceback for unexpected errors
+        traceback.print_exc() 
         if conn: conn.close()
         return False
 
@@ -194,7 +185,6 @@ def ingest_graph_stats_to_sql(graph_stats_path):
     print(f"Target MySQL table name: '{table_name}' in database '{MYSQL_DATABASE}'")
     conn = None
 
-        # --- Step 1: Connect without specifying database initially ---
     print(f"Connecting to MySQL Server: host={MYSQL_HOST}, port={MYSQL_PORT}, user={MYSQL_USER}")
     conn = pymysql.connect(
         host=MYSQL_HOST,
@@ -205,18 +195,13 @@ def ingest_graph_stats_to_sql(graph_stats_path):
         cursorclass=pymysql.cursors.DictCursor 
     )
     print("Successfully connected to MySQL server.")
-    # --- Step 2: Ensure the target database exists ---
     with conn.cursor() as cursor:
         print(f"Ensuring database '{MYSQL_DATABASE}' exists...")
-        # Use backticks `` for safety around database name
         cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{MYSQL_DATABASE}`")
         print(f"Database '{MYSQL_DATABASE}' check/creation complete.")
-        # Select the database for the rest of the session
         cursor.execute(f"USE `{MYSQL_DATABASE}`")
         print(f"Using database '{MYSQL_DATABASE}'.")
-    # --- Step 3: Proceed with table creation and data insertion ---
-    with conn.cursor() as cursor: # Use the same connection
-        # Create table if it doesn't exist
+    with conn.cursor() as cursor: 
         create_table_sql = f"""
         CREATE TABLE IF NOT EXISTS `{table_name}` (
             `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -238,14 +223,13 @@ def ingest_graph_stats_to_sql(graph_stats_path):
         print(f"Executing: CREATE TABLE IF NOT EXISTS `{table_name}`...")
         cursor.execute(create_table_sql)
         print("Table check/creation complete.")
-        # Read JSON data
         with open(graph_stats_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         if not isinstance(data, list):
             print("Error: JSON file should contain a list of objects.")
             conn.close()
             return False
-        # Prepare insert statement
+
         insert_sql = f"""
         INSERT INTO `{table_name}` (
             graph_type, `number_of_nodes`, number_of_relationships, mean_distance, diameter, radius,
@@ -270,15 +254,14 @@ def ingest_graph_stats_to_sql(graph_stats_path):
                 entry.get("communities_level_2"),
                 entry.get("communities_level_3")
             ))
-        # Insert data if any
+
         if rows_to_insert:
             print(f"Inserting {len(rows_to_insert)} rows into `{table_name}`...")
             rowcount = cursor.executemany(insert_sql, rows_to_insert)
-            conn.commit() # Commit the transaction
+            conn.commit() 
             print(f"{rowcount} rows inserted successfully.")
         else:
             print("No data found in JSON to insert.")
-    # --- Step 4: Close connection ---
     conn.close()
     print(f"PyMySQL connection closed for {table_name}.")
     return True
