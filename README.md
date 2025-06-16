@@ -11,7 +11,7 @@
     *   [Installation](#installation)
     *   [Umgebungsvariablen](#umgebungsvariablen)
     *   [Datenbank- und Services-Setup](#datenbank--und-services-setup)
-    *   [Experimente durchführen](#experimente-durchfuhren) 
+    *   [Experimente durchfuehren](#experimente-durchfuehren) 
 *   [Ergebnisse & Analyse](#ergebnisse--analyse)
 *   [Danksagungen](#danksagungen)
 ---
@@ -143,7 +143,7 @@ Um alle gestarteten Container und ihre Netzwerke zu stoppen und zu entfernen (un
  ```bash
 docker-compose down
 ```
-## Experimente durchführen
+## Experimente durchfuehren
 Im main.py-Skript kann eine Liste von URLs angegeben werden, die gecrawlt werden. Diese dienen als Datenquelle für die gesamte Pipeline. Um die gesamte RAG-Evaluierungspipeline auszuführen: Ingestion, Kontextabruf, LLM-basierte Antwortgenerierung und Metrikenberechnung für alle definierten Retrieval-Strategien und Frage-Antwort-Paare.
  ```bash
 cd final_ba
