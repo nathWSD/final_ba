@@ -32,7 +32,7 @@ Das Framework automatisiert den gesamten Prozess von der Datenaufnahme, über de
 *   **Umfassende Metrikevaluation:** Bewertung der generierten Antworten und Retrieval-Leistung mittels vielfältiger Metriken, darunter: Präzision, Recall, Relevanz, ROUGE-1, Kosinus-Ähnlichkeit, Zeitverbrauch sowie Eingabe- und Ausgabetoken-Anzahl.
 *   **Schwierigkeitsgrad-Analyse:** Bewertung der Strategien über einen dreistufigen Datensatz von 54 Frage-Antwort-Paaren (Level 1, Level 2, Level 3), mit 18 Paaren pro Level.
 *   **Strukturierte Ergebnisspeicherung:** Detaillierte Speicherung aller Evaluierungsergebnisse in JSON-Dateien **und in einer MySQL-Datenbank** für einfache Analyse und Visualisierung.
-*   **Monitoring & Visualisierung:** Integration mit Grafana zur Überwachung und Visualisierung der Metrikverläufe und Ergebnisse.
+*   **Monitoring & Visualisierung:** Integration mit Grafana zur Visualisierung der Metrikverläufe und Ergebnisse.
 
 ## 📐 Architektur & Ablauf
 
@@ -156,4 +156,4 @@ Ein besonderer Dank gilt:
 Meinen beiden Prüfern für ihre wertvolle Betreuung und Unterstützung während dieses Projekts.
 Meinen Kollegen für ihre Unterstützung.
 Google Gemini, für die Bereitstellung leistungsstarker Large Language Models, die einen integralen Bestandteil dieser Arbeit bilden.
-Den Entwicklern und Communities der weiteren verwendeten Open-Source-Bibliotheken und Technologien, insbesondere Qdrant, Neo4j, MySQL, Grafana, FastEmbed, SentenceTransformers und LangChain.
+Den Entwicklern und Communities der weiteren verwendeten Bibliotheken und Technologien, insbesondere Qdrant, Neo4j, MySQL, Grafana, FastEmbed, SentenceTransformers und LangChain.
