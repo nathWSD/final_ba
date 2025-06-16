@@ -1,5 +1,5 @@
 # 🚀 RAG-Strategie-Evaluierungsrahmen
-*(Retrieval-Augmented Generation Performance Evaluation Framework)*
+*(Retrieval-Augmented Generation Performance Evaluation )*
 
 ## Inhaltsverzeichnis
 *   [Über das Projekt](#-über-das-projekt)
@@ -61,10 +61,9 @@ Für die **Vektor-Strategien** werden Textelemente als hochdimensionale Einbettu
 
 ## 🚀 Erste Schritte
 
-Befolgen Sie diese Anweisungen, um das Projekt lokal einzurichten und auszuführen.
+Um das Projekt lokal einzurichten und auszuführen, sollten die folgenden Komponenten installiert werden.
 
 ### Voraussetzungen
-Stellen Sie sicher, dass Sie Folgendes installiert haben:
 *   [Python 3.11+](https://www.python.org/downloads/)
 *   [Docker Desktop](https://www.docker.com/products/docker-desktop/) (oder Docker Engine und Docker Compose)
 *   Internetzugang (für das Herunterladen von Embedding-Modellen und den Zugriff auf die Google Gemini API)
@@ -91,7 +90,7 @@ Stellen Sie sicher, dass Sie Folgendes installiert haben:
     ```
 ### Umgebungsvariablen
 
-Erstellen Sie eine `.env`-Datei im Stammverzeichnis Ihres Projekts und füllen Sie diese mit den erforderlichen Umgebungsvariablen aus. **Ersetzen Sie die Platzhalter durch Ihre tatsächlichen Werte.**
+Eine .env-Datei sollte im Stammverzeichnis des Projekts erstellt und mit den erforderlichen Umgebungsvariablen gefüllt werden. Die Platzhalter müssen durch die tatsächlichen Werte ersetzt werden.
 
 **Beispiel `.env`:**
 
@@ -135,8 +134,8 @@ HYBRID_COLLECTION_NAME=hybrid_collection
 ```
 
 ## Datenbank- und Services-Setup
-Mit der bereitgestellten docker-compose.yml-Datei können Sie alle benötigten Datenbanken (Neo4j, MySQL, Qdrant) und den Grafana-Monitoring-Dienst mit einem einzigen Befehl starten.
- ```bash
+Mit der bereitgestellten docker-compose.yml-Datei können alle benötigten Datenbanken (Neo4j, MySQL, Qdrant) sowie der Grafana-Monitoring-Dienst mit einem einzigen Befehl gestartet werden.
+```bash
 docker-compose up -d
 ```
 Um alle gestarteten Container und ihre Netzwerke zu stoppen und zu entfernen (und die Volumendaten zu erhalten):
@@ -150,7 +149,7 @@ cd final_ba
 python main.py
 ```
 ## Ergebnisse & Analyse
-Für interaktive Dashboards und zur Echtzeit-Visualisierung des Metrikverlaufs über die Zeit können die in Grafana vorkonfigurierten Dashboards genutzt werden. Der Zugriff erfolgt über http://localhost:3000, wobei die Anmeldung mit den in der .env-Datei festgelegten Admin-Anmeldedaten durchgeführt wird.
+Für interaktive Dashboards und zur Visualisierung des Metrikverlaufs können die in Grafana vorkonfigurierten Dashboards genutzt werden. Der Zugriff erfolgt über http://localhost:3000, wobei die Anmeldung mit den in der .env-Datei festgelegten Admin-Anmeldedaten durchgeführt wird.
 
 ## Danksagungen
 Ein besonderer Dank gilt:
