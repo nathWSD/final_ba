@@ -35,7 +35,6 @@ def load_json_to_mysql(json_path, shared_start_time):
 
     conn = None
     try:
-        # --- Step 1: Connect without specifying database initially ---
         print(f"Connecting to MySQL Server: host={MYSQL_HOST}, port={MYSQL_PORT}, user={MYSQL_USER}")
         conn = pymysql.connect(
             host=MYSQL_HOST,
@@ -47,7 +46,6 @@ def load_json_to_mysql(json_path, shared_start_time):
         )
         print("Successfully connected to MySQL server.")
 
-        # --- Step 2: Ensure the target database exists ---
         with conn.cursor() as cursor:
             print(f"Ensuring database '{MYSQL_DATABASE}' exists...")
             cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{MYSQL_DATABASE}`")
@@ -55,7 +53,6 @@ def load_json_to_mysql(json_path, shared_start_time):
             cursor.execute(f"USE `{MYSQL_DATABASE}`")
             print(f"Using database '{MYSQL_DATABASE}'.")
 
-        # --- Step 3: Proceed with table creation and data insertion ---
         with conn.cursor() as cursor:
             create_table_sql = f"""
             CREATE TABLE IF NOT EXISTS `{table_name}` (
@@ -88,7 +85,6 @@ def load_json_to_mysql(json_path, shared_start_time):
             cursor.execute(create_table_sql)
             print("Table check/creation complete.")
 
-            # Read JSON data
             with open(json_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
@@ -97,7 +93,6 @@ def load_json_to_mysql(json_path, shared_start_time):
                 conn.close()
                 return False
 
-            # Prepare insert statement
             insert_sql = f"""
             INSERT INTO `{table_name}` (
                 search_type, `precision`, recall, relevancy, rouge1, cosine_similarity,
@@ -266,10 +261,7 @@ def ingest_graph_stats_to_sql(graph_stats_path):
     print(f"PyMySQL connection closed for {table_name}.")
     return True
     
-    
-
 def grafana_visual_eval_data(graph_stats_path):
-  
     print("--- Step 1: Load JSON data into MySQL ---")
 
     shared_start_time = datetime.datetime.now() 

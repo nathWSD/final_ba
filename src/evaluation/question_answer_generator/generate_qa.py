@@ -14,12 +14,10 @@ load_dotenv(dotenv_path=os.path.join(os.getcwd(), '.env'), override=True)
 
 
 def parse_response_to_json(response_text):
-        # Look for JSON pattern
     json_pattern = r'```json\s*([\s\S]*?)\s*```'
     json_match = re.search(json_pattern, response_text)
         
     if json_match:
-            # Extract JSON from code block
        json_str = json_match.group(1).strip()
        return json.loads(json_str)
 
@@ -45,12 +43,8 @@ def generate_question_answer_levels(text_list: List[str],
 
 
     num_chunks = len(text_list)
-    # Create a descriptive string for the Level 2 range
     level_2_range_description = f"e.g., requiring integration of {max(2, num_chunks // 3)} to {max(3, num_chunks // 2 + 1)} specific chunks"
-
-    # Format the input text chunks
     formatted_text = "\n\n---\n\n".join([f"Chunk {i+1}:\n{chunk}" for i, chunk in enumerate(text_list)])
-
 
     prompt_template = """
         You are an AI expert tasked with creating evaluation questions to differentiate between standard vector-based RAG and more advanced graph-based RAG systems. You are provided with **{num_chunks} distinct text chunks** separated by '---'. Your objective is to generate question-answer pairs at three complexity levels. Level 1 should be answerable by simple vector retrieval from a single chunk. **Levels 2 and 3 MUST be designed to be difficult for standard vector RAG** because they require understanding relationships, sequences, or comparisons across multiple, potentially non-adjacent or semantically dissimilar chunks, or require a holistic grasp of the entire dataset – tasks where graph RAG's ability to model connections explicitly is advantageous.
@@ -125,7 +119,6 @@ def generate_question_answer_levels(text_list: List[str],
     }
     parsed_data = None 
 
-    # Set up the LLM chain components
     try:
         prompt = ChatPromptTemplate.from_template(prompt_template)
         llm = gemini_llm(model_name=model, temperature=temperature)
@@ -133,15 +126,12 @@ def generate_question_answer_levels(text_list: List[str],
     except Exception as e:
         logging.error(f"Failed to initialize LLM chain: {e}")
         traceback.print_exc()
-        return result # Cannot proceed without the chain
+        return result 
 
     for attempt in range(max_retries):
         logging.info(f"Attempt {attempt + 1} of {max_retries} to generate QA levels.")
-        response = None # Reset response for each attempt
+        response = None 
         try:
-            # --- Step 1: Invoke LLM Chain ---
-            # This call might raise its own exceptions (network, API key, etc.)
-            # which will *not* trigger our specific JSON retry, but will exit the attempt.
             response = chain.invoke({
                 "input_text": formatted_text,
                 "questions_per_level": questions_per_level,
@@ -149,16 +139,12 @@ def generate_question_answer_levels(text_list: List[str],
                 "level_2_range_description": level_2_range_description
             })
             logging.debug(f"LLM Raw Response (Attempt {attempt + 1}):\n{response}")
-
-            # --- Step 2: Attempt to Parse JSON ---
-            # This is the specific point where failure triggers a retry
             parsed_data = parse_response_to_json(response)
             logging.info(f"Successfully parsed JSON on attempt {attempt + 1}.")
-            break # Exit the loop on successful parsing
+            break 
 
         except json.JSONDecodeError as e:
             logging.warning(f"Attempt {attempt + 1} failed: JSON Decode Error - {e}")
-            #logging.debug(f"Failed response content: {response}") 
             if attempt < max_retries - 1:
                 logging.info(f"Waiting {retry_delay_seconds} seconds before next attempt...")
                 time.sleep(retry_delay_seconds)
@@ -167,26 +153,20 @@ def generate_question_answer_levels(text_list: List[str],
                 logging.error(f"Final failing response: {response}")
 
         except Exception as e:
-            # Catch other potential errors during LLM call or unexpected issues
             logging.error(f"Attempt {attempt + 1} failed due to an unexpected error: {e}")
             traceback.print_exc()
-
             break
 
-    # --- Step 3: Populate results if parsing succeeded ---
     if parsed_data is not None:
         result["level_1"] = parsed_data.get("level_1", []) if isinstance(parsed_data.get("level_1"), list) else []
         result["level_2"] = parsed_data.get("level_2", []) if isinstance(parsed_data.get("level_2"), list) else []
         result["level_3"] = parsed_data.get("level_3", []) if isinstance(parsed_data.get("level_3"), list) else []
-
-
         for level_key in ["level_1", "level_2", "level_3"]:
              if level_key not in parsed_data:
                  logging.warning(f"Parsed data is missing key: {level_key}")
 
     else:
         logging.error("Failed to obtain valid JSON data after all retries.")
-
     return result
 
 def process_batched_qa_pairs(
@@ -199,7 +179,6 @@ def process_batched_qa_pairs(
     """
     Processes text chunks in batched sets to generate question-answer pairs
     at different complexity levels and accumulates the results.
-
     Args:
         all_text_list (List[str]): List of text chunks to process.
         set_size (int): Number of chunks per batch.
@@ -211,7 +190,6 @@ def process_batched_qa_pairs(
         Dict[str, List[Dict[str, str]]]: Aggregated results containing lists of
                                          question-answer pairs, deduplicated by question text.
     """
-    # Calculate number of batches needed
     num_batches = math.ceil(len(all_text_list) / set_size)
     if not all_text_list:
         print("Input text list is empty. No processing needed.")
@@ -219,36 +197,26 @@ def process_batched_qa_pairs(
         
     print(f"Processing {len(all_text_list)} chunks in {num_batches} batches of up to {set_size} chunks each.")
 
-    # Initialize aggregated results structure for question-answer pairs
     aggregated_results: Dict[str, List[Dict[str, str]]] = {
         "level_1": [],
         "level_2": [],
         "level_3": []
     }
-    # Keep track of keys for iteration
     level_keys = list(aggregated_results.keys())
-
-    # Process in batches
     for batch_idx in range(num_batches):
         start_idx = batch_idx * set_size
-        end_idx = min(start_idx + set_size, len(all_text_list)) # Handle last batch size correctly
+        end_idx = min(start_idx + set_size, len(all_text_list))
         batch = all_text_list[start_idx:end_idx]
-
         if not batch: 
             continue
 
         print(f"\n--- Processing Batch {batch_idx+1}/{num_batches} ({len(batch)} chunks) ---")
-
-        # Generate question-answer pairs for the current batch
-        # **** Call the NEW function ****
         batch_results = generate_question_answer_levels(
             text_list=batch,
             model=model,
             temperature=temperature,
             questions_per_level=questions_per_level
         )
-
-        # Aggregate results
         print(f"Batch {batch_idx+1} results obtained:")
         for level_key in level_keys:
             batch_qa_pairs = batch_results.get(level_key, [])
@@ -256,51 +224,40 @@ def process_batched_qa_pairs(
             aggregated_results[level_key].extend(batch_qa_pairs)
 
     print("\n--- Aggregation Complete. Starting Deduplication... ---")
-
-    # Deduplicate results across all batches based on the 'question' text
     deduplicated_results: Dict[str, List[Dict[str, str]]] = {level: [] for level in level_keys}
-    #seen_questions_by_level: Dict[str, Set[str]] = {level: set() for level in level_keys}
-
     total_before_dedup = sum(len(qa_list) for qa_list in aggregated_results.values())
     print(f"Total pairs before deduplication: {total_before_dedup}")
 
     for level_key in level_keys:
         unique_pairs_for_level = []
-        seen_questions_for_level = set() # Track questions seen *within this level*
+        seen_questions_for_level = set() 
         
         for qa_pair in aggregated_results[level_key]:
-            # Basic validation of the pair structure
             if isinstance(qa_pair, dict) and "question" in qa_pair and "answer" in qa_pair:
                 question_text = qa_pair["question"]
-                # Add the pair only if its question hasn't been seen for this level yet
                 if question_text not in seen_questions_for_level:
                     unique_pairs_for_level.append(qa_pair)
                     seen_questions_for_level.add(question_text)
             else:
                 print(f"Warning: Skipping invalid/malformed item in '{level_key}' during deduplication: {qa_pair}")
-        
         deduplicated_results[level_key] = unique_pairs_for_level
         print(f"  - {level_key}: Kept {len(unique_pairs_for_level)} unique pairs (based on question).")
-
 
     print("\n--- Processing Complete. Final Unique Counts: ---")
     for level_key in level_keys:
         print(f"- {level_key}: {len(deduplicated_results[level_key])} unique question-answer pairs")
-
     return deduplicated_results
 
 def generate_eval_questions_answers(dataset_path, set_size, questions_per_level):
     all_text_list = create_texts_data(dataset_path)
     all_questions_answers = process_batched_qa_pairs(all_text_list=all_text_list, set_size=set_size, model="gemini-2.5-pro-preview-03-25", temperature=0.9, questions_per_level=questions_per_level)
-    
     path_qa = os.path.join(os.getcwd(), 'src/evaluation/question_answer_generator/qa_data.json')
     
     with open(path_qa, 'w', encoding='utf-8') as json_file:
         json.dump(all_questions_answers, json_file, indent=4, ensure_ascii=False)
     
     print(f"Successfully saved QA data to: {path_qa}")
-    
-    return path_qa #,all_questions_answers,
+    return path_qa
     
     
     

@@ -19,7 +19,6 @@ import time
 load_dotenv(dotenv_path=os.path.join(os.getcwd(), '.env'), override=True)
 
 
-
 class GoogleVertexAI(DeepEvalBaseLLM):
     """Class to implement Vertex AI for DeepEval"""
     def __init__(self, model):
@@ -65,8 +64,7 @@ class RougeMetric(BaseMetric):
     def __name__(self):
         return "Rouge Metric"
 
-# Initilialize safety filters for vertex model
-# This is important to ensure no evaluation responses are blocked
+
 safety_settings = {
     HarmCategory.HARM_CATEGORY_UNSPECIFIED: HarmBlockThreshold.BLOCK_NONE,
     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
@@ -101,7 +99,6 @@ def calculate_cosine_similarity(
         print(f"  Skipping {metric_name}: Missing actual_output or expected_output.")
         return 0.0
     try:
-        # Generate embeddings for both strings
         embedding_actual = embedding_model.encode(actual_output)
         embedding_expected = embedding_model.encode(expected_output)
 
@@ -109,31 +106,22 @@ def calculate_cosine_similarity(
              print(f"  Skipping {metric_name}: Failed to generate one or both embeddings.")
              return 0.0
 
-        # Ensure embeddings are 2D arrays for sklearn's function
-        # reshape(1, -1) converts a 1D array into a 2D array with one row
         embedding_actual_2d = embedding_actual.reshape(1, -1)
         embedding_expected_2d = embedding_expected.reshape(1, -1)
-
-        # Calculate cosine similarity
-        # sklearn returns a 2D array (matrix), get the single value [0][0]
         score = sklearn_cosine_similarity(embedding_actual_2d, embedding_expected_2d)[0][0]
-
-        # Clip score to be within [0, 1] range (cosine similarity can technically be -1 to 1,
-        # but for sentence embeddings it's usually non-negative and often scaled 0-1)
         score = max(0.0, min(1.0, score))
-
         print(f"  {metric_name} calculated successfully. Score: {score:.4f}")
         return score
 
     except Exception as e:
         print(f"  Error calculating {metric_name}: {e}")
-        return 0.0 # Return default score on any error
+        return 0.0 
     
 
 def calculate_answer_relevancy(
     query: Optional[str],
     actual_output: Optional[str],
-    llm_model: Any, # Type hint for your LLM model object (e.g., GoogleVertexAI)
+    llm_model: Any, 
     max_retries: int,
     retry_delay_seconds: int,
     threshold: float = 0.7
@@ -148,10 +136,10 @@ def calculate_answer_relevancy(
     """
     if llm_model is None:
         print("  Skipping Answer Relevancy: LLM model not provided.")
-        return None, False # Not a failure *of the metric calculation itself*
+        return None, False 
     if query is None or actual_output is None:
         print("  Skipping Answer Relevancy: query or actual_output is missing.")
-        return None, False # Data missing, not a calculation failure
+        return None, False 
 
     metric_name = "Answer Relevancy"
     score = None
@@ -162,21 +150,19 @@ def calculate_answer_relevancy(
             metric = AnswerRelevancyMetric(threshold=threshold, model=llm_model, include_reason=False)
             test_case = LLMTestCase(input=query, actual_output=actual_output)
             metric.measure(test_case)
-            score = metric.score # Can be None if metric deems it so
+            score = metric.score 
             print(f"  {metric_name} calculated successfully on attempt {attempt + 1}. Score: {score}")
-            failed = False # Success
-            break # Exit retry loop
+            failed = False
+            break
         except Exception as e:
             print(f"  Error calculating {metric_name} on attempt {attempt + 1}: {e}")
             if attempt < max_retries:
                 print(f"  Retrying in {retry_delay_seconds} seconds...")
                 time.sleep(retry_delay_seconds)
-            # Let loop continue to max_retries
-    else: # Executes if loop finished without break
+    else: 
         print(f"  Max retries ({max_retries + 1}) reached for {metric_name}")
-        failed = True # All retries failed
-        score = None # Ensure score is None if all attempts failed
-
+        failed = True 
+        score = None
     return score, failed
 
 
@@ -199,7 +185,6 @@ def calculate_contextual_precision(
     if llm_model is None:
         print("  Skipping Contextual Precision: LLM model not provided.")
         return None, False
-    # Check for all required data
     missing_data = [k for k, v in {
         'query': query, 'actual_output': actual_output,
         'expected_output': expected_output, 'retrieval_context': retrieval_context
@@ -226,11 +211,10 @@ def calculate_contextual_precision(
             if attempt < max_retries:
                 print(f"  Retrying in {retry_delay_seconds} seconds...")
                 time.sleep(retry_delay_seconds)
-    else: # No break occurred
+    else: 
         print(f"  Max retries ({max_retries + 1}) reached for {metric_name}.")
         failed = True
         score = None
-
     return score, failed
 
 
@@ -253,7 +237,6 @@ def calculate_contextual_recall(
     if llm_model is None:
         print("  Skipping Contextual Recall: LLM model not provided.")
         return None, False
-    # Check for all required data
     missing_data = [k for k, v in {
         'query': query, 'actual_output': actual_output,
         'expected_output': expected_output, 'retrieval_context': retrieval_context
@@ -280,11 +263,10 @@ def calculate_contextual_recall(
             if attempt < max_retries:
                 print(f"  Retrying in {retry_delay_seconds} seconds...")
                 time.sleep(retry_delay_seconds)
-    else: # No break occurred
+    else: 
         print(f"  Max retries ({max_retries + 1}) reached for {metric_name}")
         failed = True
         score = None
-
     return score, failed
 
 
@@ -293,7 +275,7 @@ def calculate_rouge_score(
     actual_output: Optional[str],
     expected_output: Optional[str],
     rouge_type: str = "rouge1", 
-    threshold: float = 0.5 # Threshold for the RougeMetric's is_successful()
+    threshold: float = 0.5 
 ) -> Optional[float]:
     """
     Calculates the ROUGE score using the RougeMetric class.
@@ -303,32 +285,28 @@ def calculate_rouge_score(
     """
     if actual_output is None or expected_output is None:
         print(f"  Skipping ROUGE-{rouge_type[5:].upper()}: actual_output or expected_output is missing.")
-        return 0.0 # Return default score
+        return 0.0 
 
     metric_name = f"ROUGE-{rouge_type[5:].upper()}"
     print(f"\nAttempting {metric_name} calculation...")
 
     try:
         metric = RougeMetric(threshold=threshold)
-        # Note: RougeMetric doesn't need query or context, only actual/expected
         test_case = LLMTestCase(input = query, actual_output=actual_output, expected_output=expected_output)
         score = metric.measure(test_case)
-        # score = metric.score # Already returned by measure
         print(f"  {metric_name} calculated successfully. Score: {score}")
         return score if score is not None else 0.0
     except Exception as e:
         print(f"  Error calculating {metric_name}: {e}")
-        return 0.0 # Return default score on error
-
-# --- Main Orchestrator Function ---
+        return 0.0 
 
 def run_evaluation_metric(
     file_name: str,
     save_directory: str,
     response_obj: Dict[str, Any],
     embedding_model ,
-    model: str,  # Primary model name ( "gemini-2.5-pro") since just 1000 calls per day possible
-    fallback_model_name = "gemini-1.5-pro", # the fallback model probably after 1000 calls
+    model: str,  
+    fallback_model_name = "gemini-1.5-pro", 
     max_retries: int = 2,
     retry_delay_seconds: int = 3,
 ):
@@ -350,12 +328,10 @@ def run_evaluation_metric(
     primary_googleai_gemini_model = None
     fallback_googleai_gemini_model = None
 
-    # --- Initialize Primary Model ---
     try:
         if not os.getenv('GOOGLE_API_KEY'):
              print("Warning: GOOGLE_API_KEY not set, using dummy value for demo.")
              os.environ['GOOGLE_API_KEY'] = 'dummy-key-for-testing'
-             # raise ValueError("GOOGLE_API_KEY environment variable not set.")
 
         primary_custom_model_gemini = ChatGoogleGenerativeAI(
             model=model, safety_settings=safety_settings,
@@ -367,7 +343,6 @@ def run_evaluation_metric(
         print(f"  CRITICAL ERROR during primary model setup for '{file_name}' ({model}): {e}. Aborting evaluation.")
         return 
 
-    # --- Extract data from response_obj ---
     query = response_obj.get('query')
     actual_output = response_obj.get('llm_response')
     expected_output = response_obj.get('expected_output')
@@ -375,7 +350,6 @@ def run_evaluation_metric(
     if isinstance(retrieval_context, str):
         retrieval_context = [retrieval_context]
 
-    # --- Calculate Metrics with Primary Model ---
     relevancy_score, relevancy_failed = calculate_answer_relevancy(
         query, actual_output, primary_googleai_gemini_model, max_retries, retry_delay_seconds
     )
@@ -385,9 +359,7 @@ def run_evaluation_metric(
     recall_score, recall_failed = calculate_contextual_recall(
         query, actual_output, expected_output, retrieval_context, primary_googleai_gemini_model, max_retries, retry_delay_seconds
     )
-    
-    # Non-LLM metrics (no retries/fallback needed for these specific calculations)
-    # ROUGE score calculation (no LLM, no retries needed here)
+  
     rouge1_score = calculate_rouge_score(
         query, actual_output, expected_output, rouge_type="rouge1"
     )
@@ -395,8 +367,7 @@ def run_evaluation_metric(
         actual_output, expected_output , embedding_model 
 
     )
-    
-    # --- Attempt Fallback Model if Necessary ---
+
     needs_fallback = relevancy_failed or precision_failed or recall_failed
     fallback_attempted = False
     fallback_succeeded_relevancy = False
@@ -406,9 +377,8 @@ def run_evaluation_metric(
     if needs_fallback and model != fallback_model_name:
         print(f"\n--- Primary model '{model}' failed for some LLM metrics. Attempting fallback with '{fallback_model_name}' ---")
         fallback_attempted = True
-        # --- Initialize Fallback Model ---
         try:
-            if not os.getenv('GOOGLE_API_KEY'): # Re-check just in case
+            if not os.getenv('GOOGLE_API_KEY'): 
                  raise ValueError("GOOGLE_API_KEY environment variable not set (checked before fallback).")
 
             fallback_custom_model_gemini = ChatGoogleGenerativeAI(
@@ -420,19 +390,16 @@ def run_evaluation_metric(
 
         except Exception as e:
             print(f"  ERROR during fallback model setup ('{fallback_model_name}'): {e}. Skipping fallback attempts.")
-            fallback_googleai_gemini_model = None # Ensure it's None if setup fails
+            fallback_googleai_gemini_model = None 
 
-        # --- Retry Failed Metrics with Fallback Model (Single Attempt) ---
         if fallback_googleai_gemini_model:
-            # Note: We only retry metrics that failed the *primary* attempt.
-            # We call the same calculation functions, passing the fallback model and 0 retries.
             if relevancy_failed:
                 relevancy_score_fb, failed_fb = calculate_answer_relevancy(
                     query, actual_output, fallback_googleai_gemini_model, max_retries=3, retry_delay_seconds=7
                 )
-                if not failed_fb: # If fallback succeeded
-                    relevancy_score = relevancy_score_fb # Update the score
-                    relevancy_failed = False # Mark as no longer failed
+                if not failed_fb: 
+                    relevancy_score = relevancy_score_fb 
+                    relevancy_failed = False 
                     fallback_succeeded_relevancy = True
 
             if precision_failed:
@@ -457,18 +424,12 @@ def run_evaluation_metric(
 
     elif needs_fallback and model == fallback_model_name:
          print(f"\n--- Primary model '{model}' failed for some LLM metrics, but it is already the fallback model. No further fallback attempted. ---")
-    #else:
-        # print("\n--- Primary model succeeded for all attempted LLM metrics or fallback not needed. ---") # Can be noisy
-
-    # --- Finalize Scores ---
-    # Assign default 0.0 if score is still None (due to missing data or persistent failure)
+  
     final_relevancy_score = 0.000 if relevancy_score is None else relevancy_score
     final_precision_score = 0.000 if precision_score is None else precision_score
     final_recall_score = 0.000 if recall_score is None else recall_score
     final_rouge1_score = 0.000 if rouge1_score is None else float(rouge1_score)
     final_cosine_sim_score = 0.000 if cosine_sim_score is None else float(cosine_sim_score)
-
-    # --- Prepare Result Data ---
     num_input_token = response_obj.get('num_input_token')
     num_output_token = response_obj.get('num_output_token')
     time_taken = response_obj.get('time_taken')
@@ -488,19 +449,17 @@ def run_evaluation_metric(
         "qa_level": qa_level,
         "actual_output" : actual_output,
         "expected_output" : expected_output,
-        "retrieval_context" : retrieval_context[0], # Keep as string since the list always has 1 element
+        "retrieval_context" : retrieval_context[0], 
         "primary_llm_used": model,
         "fallback_llm_attempted": fallback_model_name if fallback_attempted else None,
         "fallback_used_and_succeeded_relevancy": fallback_succeeded_relevancy,
         "fallback_used_and_succeeded_precision": fallback_succeeded_precision,
         "fallback_used_and_succeeded_recall": fallback_succeeded_recall,
-        # Record final failure state *after* potential fallback attempts
         "final_state_failed_relevancy": relevancy_failed,
         "final_state_failed_precision": precision_failed,
         "final_state_failed_recall": recall_failed,
     }
 
-    # --- Save Results to JSON ---
     try:
         if not file_name.lower().endswith('.json'):
             output_json_filename = f"{file_name}.json"
@@ -510,7 +469,6 @@ def run_evaluation_metric(
 
         os.makedirs(save_directory, exist_ok=True)
         output_json_path = os.path.join(save_directory, output_json_filename)
-
         append_to_json(result_data, output_json_path)
         print(f"Results for '{file_name}' appended to {output_json_path}")
 
@@ -522,7 +480,6 @@ def append_to_json(data_to_append: dict, json_file_path: str):
     """Reads a JSON file, appends new data as a dictionary to a list, and writes it back."""
     results_list = []
     try:
-        # Try to read existing data
         if os.path.exists(json_file_path) and os.path.getsize(json_file_path) > 0:
             with open(json_file_path, 'r', encoding='utf-8') as f:
                 try:
@@ -534,13 +491,8 @@ def append_to_json(data_to_append: dict, json_file_path: str):
                 except json.JSONDecodeError:
                     print(f"Warning: Could not decode JSON from {json_file_path}. Starting with a new list.")
                     results_list = []
-        # If file doesn't exist or is empty, results_list remains an empty list
 
-        # Append the new data dictionary
         results_list.append(data_to_append)
-
-        # Write the updated list back to the file
-        # Ensure directory exists if path includes one (optional based on path structure)
         output_dir = os.path.dirname(json_file_path)
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir)

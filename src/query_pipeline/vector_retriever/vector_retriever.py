@@ -27,8 +27,6 @@ HYBRID_COLLECTION_NAME = f"{COLLECTION_BASE_NAME}_hybrid"
 
 dense_embedding_model = TextEmbedding(model_name=DENSE_MODEL_KEY)
 sparse_embedding_model = SparseTextEmbedding(model_name=SPARSE_MODEL_KEY)
-
-
 sample_embedding = list(dense_embedding_model.embed(["sample text"]))
 DENSE_VECTOR_SIZE = len(sample_embedding[0])
 
@@ -51,8 +49,8 @@ sparse_vectors_config = {
 }
 
 # 3. Hybrid Config (Combines Dense and Sparse)
-hybrid_vectors_config = dense_vectors_config # Re-use dense config
-hybrid_sparse_vectors_config = sparse_vectors_config # Re-use sparse config
+hybrid_vectors_config = dense_vectors_config 
+hybrid_sparse_vectors_config = sparse_vectors_config 
 
 
 def retrieve_chunks(
@@ -92,11 +90,9 @@ def retrieve_chunks(
 
     try:
         if collection_name == DENSE_COLLECTION_NAME:
-            
             print("Executing search using client.query_points (dense)...")
             dense_query_vector_raw = list(dense_model.embed([query]))[0]
             dense_query_vector_list: List[float] = dense_query_vector_raw.tolist()
-            
             query_response = client.query_points(
                 collection_name=collection_name,
                 query=dense_query_vector_list, 
@@ -111,12 +107,10 @@ def retrieve_chunks(
             print("Executing search using client.query_points (sparse)...")
             sparse_query_vector_obj = list(sparse_model.embed([query]))[0]
             sparse_query_vector_dict = sparse_query_vector_obj.as_object()
-
             sparse_query_vector_data = models.SparseVector(
                  indices=sparse_query_vector_dict['indices'],
                  values=sparse_query_vector_dict['values']
              )
-
             query_response = client.query_points(
                 collection_name=collection_name,
                 query=sparse_query_vector_data, 
@@ -138,15 +132,14 @@ def retrieve_chunks(
                  indices=sparse_query_vector_dict['indices'],
                  values=sparse_query_vector_dict['values']
              )
-
             prefetch_list = [
                 models.Prefetch(
                     query=dense_query_vector_list,  
                     using=dense_model_key,
-                    limit=n * 5  # Fetch more candidates for fusion
+                    limit=n * 5 
                 ),
                 models.Prefetch(
-                    query=sparse_query_vector_data_for_prefetch, # Explicit SparseVector object
+                    query=sparse_query_vector_data_for_prefetch, 
                     using=sparse_model_key,
                     limit=n * 5
                 )
@@ -154,8 +147,6 @@ def retrieve_chunks(
 
             # Define the fusion query type
             fusion_query = models.FusionQuery(fusion=models.Fusion.RRF)
-
-            # Call query_points with separate prefetch and query=FusionQuery args
             query_response = client.query_points(
                 collection_name=collection_name,
                 prefetch=prefetch_list,       
@@ -168,19 +159,15 @@ def retrieve_chunks(
         else:
             print(f"Error: Unknown collection name '{collection_name}'. Cannot determine search type.")
             return []
-
-
         if query_response:
             search_result = query_response.points
         else:
              search_result = [] 
-
         print(f"Found {len(search_result)} results.")
         return search_result
-
     except Exception as e:
         print(f"An error occurred during search in collection '{collection_name}': {e}")
-        traceback.print_exc() # Print detailed traceback for debugging
+        traceback.print_exc()
         return []
     
 def all_vector_retrieve(search_query: str, num_results: int) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
@@ -239,23 +226,18 @@ def all_vector_retrieve(search_query: str, num_results: int) -> Tuple[Dict[str, 
     if hybrid_raw_results:
             hybrid_context = format_qdrant_results_to_string(hybrid_raw_results)
 
-    # --- Construct Output Packages ---
     dense_package = {
         "context": dense_context,
         "retrieval_time_taken": measurer.get_timing('dense_retrieval_time'),
     }
-
     sparse_package = {
         "context": sparse_context,
         "retrieval_time_taken": measurer.get_timing('sparse_retrieval_time'),
     }
-
     hybrid_package = {
         "context": hybrid_context,
         "retrieval_time_taken": measurer.get_timing('hybrid_retrieval_time'),
     }
-
-    #print(f"  Timings recorded: {measurer.get_all_timings()}")
     return dense_package, sparse_package, hybrid_package
     
     
