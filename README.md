@@ -1,10 +1,6 @@
 # 🚀 RAG-Strategie-Evaluierungsrahmen
 *(Retrieval-Augmented Generation Performance Evaluation Framework)*
 
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/nathWSD/final_ba/main/Build%20and%20Test?style=flat-square) <!-- Ersetzen Sie 'Build and Test' mit Ihrem tatsächlichen Workflow-Namen, falls abweichend -->
-![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)
-![Python Version](https://img.shields.io/badge/Python-3.9%2B-blue.svg?style=flat-square)
-
 ## Inhaltsverzeichnis
 *   [Über das Projekt](#-über-das-projekt)
 *   [Merkmale](#-merkmale)
@@ -15,8 +11,8 @@
     *   [Installation](#installation)
     *   [Umgebungsvariablen](#umgebungsvariablen)
     *   [Datenbank- und Services-Setup](#datenbank--und-services-setup)
-    *   [Experimente durchführen](#experimente-durchführen)
-*   [Ergebnisse & Analyse](#ergebnisse--analyse)
+    *   [Experimente durchführen](#-experimente-durchführen)
+*   [Ergebnisse & Analyse](#-ergebnisse--analyse)
 *   [Danksagungen](#danksagungen)
 
 ---
