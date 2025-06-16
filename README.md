@@ -152,7 +152,7 @@ python main.py
 ## Ergebnisse & Analyse
 Für interaktive Dashboards und zur Echtzeit-Visualisierung des Metrikverlaufs über die Zeit können die in Grafana vorkonfigurierten Dashboards genutzt werden. Der Zugriff erfolgt über http://localhost:3000, wobei die Anmeldung mit den in der .env-Datei festgelegten Admin-Anmeldedaten durchgeführt wird.
 
-## 🙏 Danksagungen
+## Danksagungen
 Ein besonderer Dank gilt:
 Meinen beiden Prüfern für ihre wertvolle Betreuung und Unterstützung während dieses Projekts.
 Meinen Kollegen für ihre Unterstützung.
