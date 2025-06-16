@@ -11,7 +11,7 @@
     *   [Installation](#installation)
     *   [Umgebungsvariablen](#umgebungsvariablen)
     *   [Datenbank- und Services-Setup](#datenbank--und-services-setup)
-    *   [Experimente durchführen](#experimente-durchfuhren)
+    *   [Experimente durchführen](#experimente-durchfuhren) 
 *   [Ergebnisse & Analyse](#ergebnisse--analyse)
 *   [Danksagungen](#danksagungen)
 ---
