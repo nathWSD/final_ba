@@ -139,7 +139,7 @@ SPARSE_COLLECTION_NAME=sparse_collection
 HYBRID_COLLECTION_NAME=hybrid_collection
 ```
 
-## datenbank--und-services-setup
+## Datenbank und Services-setup
 Mit der bereitgestellten docker-compose.yml-Datei können Sie alle benötigten Datenbanken (Neo4j, MySQL, Qdrant) und den Grafana-Monitoring-Dienst mit einem einzigen Befehl starten.
  ```bash
 docker-compose up -d
@@ -148,14 +148,13 @@ Um alle gestarteten Container und ihre Netzwerke zu stoppen und zu entfernen (un
  ```bash
 docker-compose down
 ```
-
-## experimente-durchführen
+## Experimente durchführen
 Im main.py-Skript kann eine Liste von URLs angegeben werden, die gecrawlt werden. Diese dienen als Datenquelle für die gesamte Pipeline. Um die gesamte RAG-Evaluierungspipeline auszuführen: Ingestion, Kontextabruf, LLM-basierte Antwortgenerierung und Metrikenberechnung für alle definierten Retrieval-Strategien und Frage-Antwort-Paare.
  ```bash
 cd final_ba
 python main.py
 ```
-## ergebnisse-analyse
+## Ergebnisse analyse
 Für interaktive Dashboards und zur Echtzeit-Visualisierung des Metrikverlaufs über die Zeit können die in Grafana vorkonfigurierten Dashboards genutzt werden. Der Zugriff erfolgt über http://localhost:3000, wobei die Anmeldung mit den in der .env-Datei festgelegten Admin-Anmeldedaten durchgeführt wird.
 
 ## 🙏 Danksagungen
