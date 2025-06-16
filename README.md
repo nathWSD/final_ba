@@ -12,9 +12,8 @@
     *   [Umgebungsvariablen](#umgebungsvariablen)
     *   [Datenbank- und Services-Setup](#datenbank--und-services-setup)
     *   [Experimente durchführen](#-experimente-durchführen)
-*   [Ergebnisse & Analyse](#-ergebnisse--analyse)
+*   [Ergebnisse & Analyse](#ergebnisse--analyse)
 *   [Danksagungen](#danksagungen)
-
 ---
 
 ## 💡 Über das Projekt
@@ -135,7 +134,7 @@ SPARSE_COLLECTION_NAME=sparse_collection
 HYBRID_COLLECTION_NAME=hybrid_collection
 ```
 
-## Datenbank und Services-setup
+## Datenbank- und Services-Setup
 Mit der bereitgestellten docker-compose.yml-Datei können Sie alle benötigten Datenbanken (Neo4j, MySQL, Qdrant) und den Grafana-Monitoring-Dienst mit einem einzigen Befehl starten.
  ```bash
 docker-compose up -d
