@@ -87,7 +87,7 @@ async def main(ingest_all_data: bool, set_size:int = 34, questions_per_level: in
     # after generating the questions and answers per level use the questions in the pipeline and evaluate the answers 
     retriever_and_metrics_analysis_pipeline(driver, json_qa_path)    
     # run grafana visualization for all questions, answers and context for visualization
-    #grafana_visual_eval_data(graph_stats_path)
+    grafana_visual_eval_data(graph_stats_path)
     
     
 if __name__ == "__main__":
