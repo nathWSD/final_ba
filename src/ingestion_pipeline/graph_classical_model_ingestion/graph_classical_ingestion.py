@@ -1,4 +1,4 @@
-from src.ingestion_pipeline.helper_functions import create_texts_data, plot_hierarchical_communities, robust_disambiguate_entities, plot_community_graph, clear_graph, list_graph_prefixes, plot_original_graph, detect_communities, import_complete_graph_data
+from src.ingestion_pipeline.helper_functions import create_texts_data, robust_disambiguate_entities, clear_graph, list_graph_prefixes, detect_communities, import_complete_graph_data
 import pandas as pd
 import numpy as np
 import uuid
