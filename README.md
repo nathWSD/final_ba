@@ -104,14 +104,14 @@ QDRANT_CONTAINER_NAME=ba_qdrant_vector_db
 # Neo4j Konfiguration
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=your_neo4j_password 
+NEO4J_PASSWORD=neo4j_password 
 
 # MySQL Konfiguration
 MYSQL_PORT=3306 
-MYSQL_ROOT_PASSWORD=your_mysql_root_password 
+MYSQL_ROOT_PASSWORD=mysql_root_password 
 MYSQL_DATABASE=rag_evaluation_db 
 MYSQL_USER=rag_user 
-MYSQL_PASSWORD=your_mysql_user_password 
+MYSQL_PASSWORD=mysql_user_password 
 
 # Grafana Konfiguration
 GRAFANA_HOST_PORT=3000
@@ -121,7 +121,7 @@ GRAFANA_ADMIN_USER=admin
 GRAFANA_ADMIN_PASSWORD=admin_password 
 
 # Google API Key für Gemini
-GOOGLE_API_KEY=your_gemini_api_key
+GOOGLE_API_KEY=gemini_api_key
 
 # Embedding Modell Schlüssel (Modellnamen, die von FastEmbed/SentenceTransformers geladen werden)
 DENSE_MODEL_KEY=BAAI/bge-small-en-v1.5 
