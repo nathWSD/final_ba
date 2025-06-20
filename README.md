@@ -32,7 +32,7 @@ Das Framework automatisiert den gesamten Prozess von der Datenaufnahme, über de
 *   **Umfassende Metrikevaluation:** Bewertung der generierten Antworten und Retrieval-Leistung mittels vielfältiger Metriken, darunter: Präzision, Recall, Relevanz, ROUGE-1, Kosinus-Ähnlichkeit, Zeitverbrauch sowie Eingabe- und Ausgabetoken-Anzahl.
 *   **Schwierigkeitsgrad-Analyse:** Bewertung der Strategien über einen dreistufigen Datensatz von 54 Frage-Antwort-Paaren (Level 1, Level 2, Level 3), mit 18 Paaren pro Level.
 *   **Strukturierte Ergebnisspeicherung:** Detaillierte Speicherung aller Evaluierungsergebnisse in JSON-Dateien **und in einer MySQL-Datenbank** für einfache Analyse und Visualisierung.
-*   **Monitoring & Visualisierung:** Integration mit Grafana zur Überwachung und Visualisierung der Metrikverläufe und Ergebnisse.
+*   **Monitoring & Visualisierung:** Integration mit Grafana zur Visualisierung der Metrikverläufe und Ergebnisse.
 
 ## 📐 Architektur & Ablauf
 
@@ -104,14 +104,14 @@ QDRANT_CONTAINER_NAME=ba_qdrant_vector_db
 # Neo4j Konfiguration
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=your_neo4j_password 
+NEO4J_PASSWORD=neo4j_password 
 
 # MySQL Konfiguration
 MYSQL_PORT=3306 
-MYSQL_ROOT_PASSWORD=your_mysql_root_password 
+MYSQL_ROOT_PASSWORD=mysql_root_password 
 MYSQL_DATABASE=rag_evaluation_db 
 MYSQL_USER=rag_user 
-MYSQL_PASSWORD=your_mysql_user_password 
+MYSQL_PASSWORD=mysql_user_password 
 
 # Grafana Konfiguration
 GRAFANA_HOST_PORT=3000
@@ -121,7 +121,7 @@ GRAFANA_ADMIN_USER=admin
 GRAFANA_ADMIN_PASSWORD=admin_password 
 
 # Google API Key für Gemini
-GOOGLE_API_KEY=your_gemini_api_key
+GOOGLE_API_KEY=gemini_api_key
 
 # Embedding Modell Schlüssel (Modellnamen, die von FastEmbed/SentenceTransformers geladen werden)
 DENSE_MODEL_KEY=BAAI/bge-small-en-v1.5 
@@ -155,5 +155,5 @@ Für interaktive Dashboards und zur Visualisierung des Metrikverlaufs können di
 Ein besonderer Dank gilt:
 Meinen beiden Prüfern für ihre wertvolle Betreuung und Unterstützung während dieses Projekts.
 Meinen Kollegen für ihre Unterstützung.
-Google Gemini, für die Bereitstellung leistungsstarker Large Language Models, die einen integralen Bestandteil dieser Arbeit bilden.
-Den Entwicklern und Communities der weiteren verwendeten Open-Source-Bibliotheken und Technologien, insbesondere Qdrant, Neo4j, MySQL, Grafana, FastEmbed, SentenceTransformers und LangChain.
+Google Gemini – für die Bereitstellung leistungsstarker Large Language Models, insbesondere zur Generierung der Grafana-JSON-Datei sowie für den Graph Retriever, die Antwortgenerierung, die Graph-Erstellung und die Prompt-Optimierung.
+Den Entwicklern und Communities der weiteren verwendeten Bibliotheken und Technologien, insbesondere Qdrant, Neo4j, MySQL, Grafana, FastEmbed, SentenceTransformers und LangChain.
