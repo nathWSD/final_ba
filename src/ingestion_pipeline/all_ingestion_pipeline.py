@@ -33,8 +33,6 @@ def _calculate_graph_metrics(G):
         logging.warning("Graph is None or empty, cannot calculate metrics.")
         return metrics
 
-    num_nodes = G.number_of_nodes()
-
     G_lwcc = None
     largest_wcc_nodes = set()
     try:

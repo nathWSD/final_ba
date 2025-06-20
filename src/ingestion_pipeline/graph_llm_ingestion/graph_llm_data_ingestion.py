@@ -864,7 +864,6 @@ def run_graph_analysis(results, entities_df, relationships_df, text_units_df, ou
 def llm_model_run_graph_ingestion(driver, dataset_path):
 
     output_dir = os.path.join(os.getcwd(), 'src/ingestion_pipeline/graph_llm_ingestion/rag_files')
-    image_path = os.path.join(os.getcwd(), 'src/ingestion_pipeline/graph_llm_ingestion/llm_graph_images')
     results = process_text_to_graphrag_with_llm(dataset_path=dataset_path, output_dir= output_dir)
     entities_df = pd.read_parquet(os.path.join(output_dir, 'entities.parquet'))
     relationships_df = pd.read_parquet(os.path.join(output_dir, 'relationships.parquet'))
@@ -873,30 +872,7 @@ def llm_model_run_graph_ingestion(driver, dataset_path):
     communities_df = results['communities']
     communities_df.to_parquet(os.path.join(output_dir, 'communities.parquet'))
     print(f"Created {len(communities_df)} communities across 3 levels")
-    plot_original_graph(graph = results['original_graph'], save_path = image_path, prefix='LLM', filename = "llm_original_graph.png")
-    plot_community_graph(graph = results['community_graphs']['level0'], 
-                        communities = results['communities_L0'], 
-                        level_name = "Level 0 (Broad)", 
-                        save_path = image_path,
-                        filename_prefix="llm_community_graph",
-                        figsize=(14, 8))
-
-    plot_community_graph(graph = results['community_graphs']['level1'], 
-                        communities = results['communities_L1'], 
-                        level_name = "Level 1 (Intermediate)",
-                        save_path = image_path,
-                        filename_prefix="llm_community_graph",
-                        figsize=(14, 8))
-
-    plot_community_graph(graph =  results['community_graphs']['level2'], 
-                        communities =  results['communities_L2'], 
-                        level_name = "Level 2 (Detailed)", 
-                        save_path = image_path,
-                        filename_prefix="llm_community_graph",
-                        figsize=(14, 8))
-
-    plot_hierarchical_communities(results=results, save_path = image_path, figsize=(20, 7))
-        
+ 
     entities_df = pd.read_parquet(os.path.join(output_dir, 'entities.parquet'))
     relationships_df = pd.read_parquet(os.path.join(output_dir, 'relationships.parquet'))
     text_units_df = pd.read_parquet(os.path.join(output_dir, 'text_units.parquet'))
