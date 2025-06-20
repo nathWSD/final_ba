@@ -155,5 +155,5 @@ Für interaktive Dashboards und zur Visualisierung des Metrikverlaufs können di
 Ein besonderer Dank gilt:
 Meinen beiden Prüfern für ihre wertvolle Betreuung und Unterstützung während dieses Projekts.
 Meinen Kollegen für ihre Unterstützung.
-Google Gemini, für die Bereitstellung leistungsstarker Large Language Models, die einen integralen Bestandteil dieser Arbeit bilden.
+Google Gemini – für die Bereitstellung leistungsstarker Large Language Models, insbesondere zur Generierung der Grafana-JSON-Datei sowie für den Graph Retriever, die Antwortgenerierung, die Graph-Erstellung und die Prompt-Optimierung.
 Den Entwicklern und Communities der weiteren verwendeten Bibliotheken und Technologien, insbesondere Qdrant, Neo4j, MySQL, Grafana, FastEmbed, SentenceTransformers und LangChain.
