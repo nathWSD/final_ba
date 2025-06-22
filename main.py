@@ -81,7 +81,7 @@ async def main(ingest_all_data: bool, set_size:int = 34, questions_per_level: in
         json_qa_path = generate_eval_questions_answers(dataset_path, set_size, questions_per_level)
     
     else:
-        json_qa_path = os.path.join(os.getcwd(), 'src/evaluation/question_answer_generator/qa_data-Kopie.json')
+        json_qa_path = os.path.join(os.getcwd(), 'src/evaluation/question_answer_generator/qa_data.json')
     
     graph_stats_path = os.path.join(os.getcwd(), 'src/ingestion_pipeline/graph_analysis_stats.json')     
     # after generating the questions and answers per level use the questions in the pipeline and evaluate the answers 
@@ -95,4 +95,4 @@ if __name__ == "__main__":
     #NOTE change collection name for different datasets in the .env file
     #NOTE use netstat -ano | findstr :<PORT> then taskkill /PID <PID> /F to free a port incase it is occupied
 
-    asyncio.run(main(ingest_all_data = False))    
+    asyncio.run(main(ingest_all_data = True))    
