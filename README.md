@@ -124,8 +124,8 @@ GRAFANA_ADMIN_PASSWORD=admin_password
 GOOGLE_API_KEY=gemini_api_key
 
 # Embedding Modell Schlüssel (Modellnamen, die von FastEmbed/SentenceTransformers geladen werden)
-DENSE_MODEL_KEY=BAAI/bge-small-en-v1.5 
-SPARSE_MODEL_KEY=Qdrant/all-MiniLM-L6-v2 
+DENSE_MODEL_KEY=BAAI/bge-large-en-v1.5 
+SPARSE_MODEL_KEY=Qdrant/bm25
 
 # Qdrant Collection Namen
 COLLECTION_BASE_NAME = "Solar_System"
