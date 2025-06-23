@@ -127,10 +127,15 @@ GOOGLE_API_KEY=gemini_api_key
 DENSE_MODEL_KEY=BAAI/bge-small-en-v1.5 
 SPARSE_MODEL_KEY=Qdrant/all-MiniLM-L6-v2 
 
-# Qdrant Collection Namen 
+# Qdrant Collection Namen
+COLLECTION_BASE_NAME = "Solar_System"
 DENSE_COLLECTION_NAME=dense_collection
 SPARSE_COLLECTION_NAME=sparse_collection
 HYBRID_COLLECTION_NAME=hybrid_collection
+
+#Chunking
+CHUNK_SIZE= 400
+OVERLAP= 7
 ```
 
 ## Datenbank- und Services-Setup
