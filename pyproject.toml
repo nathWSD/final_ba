@@ -1,0 +1,38 @@
+[project]
+name = "ba-arbeit"
+version = "0.1.0"
+description = "ba_versioning"
+authors = [
+    {name = "nathWSD",email = "dzenathan1998@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "langchain-core (>=0.3.51,<0.4.0)",
+    "qdrant-client (>=1.13.3,<2.0.0)",
+    "onnxruntime (==1.17.0)",
+    "onnx (>=1.17.0,<2.0.0)",
+    "huggingface (>=0.0.1,<0.0.2)",
+    "huggingface-hub (==0.20.1)",
+    "datasets (==2.16.1)",
+    "fastembed (==0.4.0)",
+    "numpy (==1.26.2)",
+    "langchain-text-splitters (>=0.3.8,<0.4.0)",
+    "transformers (==4.40.0)",
+    "sentence-transformers (==2.6.0)",
+    "langchain-google-genai (>=2.1.2,<3.0.0)",
+    "deepeval (>=2.7.2,<3.0.0)",
+    "markdown (>=3.8,<4.0)",
+    "neo4j (>=5.28.1,<6.0.0)",
+    "crawl4ai (>=0.5.0.post8,<0.6.0)",
+    "matplotlib (>=3.10.1,<4.0.0)",
+    "pymysql (>=1.1.1,<2.0.0)",
+    "thefuzz (>=0.22.1,<0.23.0)",
+    "pydantic (>=2.11.3,<3.0.0)",
+    "rouge-score (>=0.1.2,<0.2.0)",
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
