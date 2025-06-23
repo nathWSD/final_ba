@@ -30,8 +30,11 @@ dependencies = [
     "thefuzz (>=0.22.1,<0.23.0)",
     "pydantic (>=2.11.3,<3.0.0)",
     "rouge-score (>=0.1.2,<0.2.0)",
+    "igraph (>=0.11.9,<0.12.0)",
+    "leidenalg (>=0.10.2,<0.11.0)",
 ]
-
+[tool.poetry]
+package-mode = false
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
