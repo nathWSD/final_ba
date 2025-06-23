@@ -151,7 +151,7 @@ docker-compose down
 Im main.py-Skript kann eine Liste von URLs angegeben werden, die gecrawlt werden. Diese dienen als Datenquelle für die gesamte Pipeline. Um die gesamte RAG-Evaluierungspipeline auszuführen: Ingestion, Kontextabruf, LLM-basierte Antwortgenerierung und Metrikenberechnung für alle definierten Retrieval-Strategien und Frage-Antwort-Paare.
  ```bash
 cd final_ba
-python main.py
+poetry run python main.py
 ```
 ## Ergebnisse & Analyse
 Für interaktive Dashboards und zur Visualisierung des Metrikverlaufs können die in Grafana vorkonfigurierten Dashboards genutzt werden. Der Zugriff erfolgt über http://localhost:3000, wobei die Anmeldung mit den in der .env-Datei festgelegten Admin-Anmeldedaten durchgeführt wird.
